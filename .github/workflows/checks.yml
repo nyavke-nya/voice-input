@@ -48,7 +48,7 @@ jobs:
           ruff check pill tests
           shellcheck install.sh uninstall.sh voice-input
           bash -n install.sh uninstall.sh voice-input
-          sh -n install.sh
+          /bin/sh ./install.sh --dry-run --skip-model >/dev/null
 
       - name: Run tests
         run: |
