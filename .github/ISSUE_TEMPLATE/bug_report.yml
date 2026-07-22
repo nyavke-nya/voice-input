@@ -10,10 +10,18 @@ body:
         Do not post passwords, tokens or other secrets.
 
   - type: input
-    id: distro
+    id: system
     attributes:
-      label: Дистрибутив / Distro
-      placeholder: CachyOS, Ubuntu 24.04, Fedora 43
+      label: Система / System
+      placeholder: Windows 11 24H2, CachyOS, Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Версия Voice Input / Voice Input version
+      placeholder: 0.1.0
     validations:
       required: true
 
@@ -21,7 +29,7 @@ body:
     id: desktop
     attributes:
       label: Окружение / Desktop
-      placeholder: Hyprland, GNOME, KDE Plasma
+      placeholder: Windows, Hyprland, GNOME, KDE Plasma
     validations:
       required: true
 
@@ -30,6 +38,7 @@ body:
     attributes:
       label: Сеанс / Session
       options:
+        - Windows
         - Wayland
         - X11
         - Не знаю / Not sure
@@ -40,10 +49,8 @@ body:
     id: diagnostics
     attributes:
       label: Диагностика / Diagnostics
-      description: Вывод команды `voice-input --diag`
+      description: Windows — `%LOCALAPPDATA%\Voice Input\logs\voice-input.log`; Linux — вывод `voice-input --diag`.
       render: shell
-    validations:
-      required: true
 
   - type: textarea
     id: problem
@@ -57,5 +64,5 @@ body:
     id: logs
     attributes:
       label: Логи / Logs
-      description: Добавьте связанные ошибки или логи, если они есть.
+      description: Добавьте связанные ошибки или полный лог, если он не помещается выше.
       render: shell

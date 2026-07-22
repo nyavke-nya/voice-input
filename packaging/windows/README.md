@@ -41,7 +41,7 @@ powershell -ExecutionPolicy Bypass -File packaging\windows\bootstrap.ps1 -Gpu:$f
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File packaging\windows\build.ps1            # GPU
-powershell -ExecutionPolicy Bypass -File packaging\windows\build.ps1 -Gpu:$false # CPU
+powershell -ExecutionPolicy Bypass -File packaging\windows\build.ps1 -Gpu false  # CPU
 powershell -ExecutionPolicy Bypass -File packaging\windows\build.ps1 -SkipInstaller  # без Inno
 ```
 
@@ -65,7 +65,8 @@ powershell -ExecutionPolicy Bypass -File packaging\windows\build.ps1 -SkipInstal
 
 `.github/workflows/windows.yml`: platform-independent тесты + тесты paths/IPC/hotkey,
 сборка EXE и installer, `--self-test`, загрузка `VoiceInputSetup.exe` как artifact.
-`push`/PR собирают GPU-вариант; вручную (`workflow_dispatch`) можно выбрать `cpu`.
+`push`/PR собирают быстрый CPU-вариант для проверки пайплайна. В ручном
+`workflow_dispatch` можно выбрать полную GPU-сборку.
 
 ## Ручная проверка на чистой Windows (Sandbox / VM без Python)
 

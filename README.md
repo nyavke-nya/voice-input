@@ -1,14 +1,39 @@
-# Voice Input for Linux
+# Voice Input for Windows and Linux
 
-Локальный голосовой ввод для Linux на базе Whisper. Программа печатает диктовку
-в активное поле, а режим `English` переводит русскую и другую поддерживаемую
-речь на английский. Аудио обрабатывается на компьютере.
+Локальный голосовой ввод на базе Whisper. Программа распознаёт речь прямо на
+компьютере и печатает текст в активное поле. Режим `English` переводит русскую
+и другую поддерживаемую речь на английский.
 
-Voice Input for Linux is an offline speech-to-text app built on Whisper. Use it
-for voice typing and dictation in focused fields on Wayland or X11. It can also
-translate supported speech into English.
+Voice Input is a local Whisper-based dictation app for Windows and Linux. It
+types recognized speech into the focused field and can translate supported
+speech into English. Audio stays on your computer.
 
-## Установка / Install
+## Windows
+
+[Скачать VoiceInputSetup.exe / Download for Windows](https://github.com/nyavke/voice-input/releases/latest/download/VoiceInputSetup.exe)
+
+Поддерживаются 64-битные Windows 10 22H2 и Windows 11.
+
+1. Скачайте `VoiceInputSetup.exe` со страницы Releases.
+2. Запустите установщик.
+3. Откройте Voice Input через меню «Пуск» или ярлык на рабочем столе.
+
+При первом запуске программа скачает выбранную модель Whisper. Windows-сборка
+включает библиотеки NVIDIA, поэтому занимает около 1.6 ГБ. Совместимая
+видеокарта используется автоматически; без неё приложение работает на CPU.
+Скорость зависит от мощности видеокарты или процессора, выбранной модели и
+длины фразы.
+
+The first launch downloads the selected Whisper model. The Windows build is
+about 1.6 GB because it includes the NVIDIA runtime. A compatible GPU is used
+automatically, with a CPU fallback. Recognition speed depends on GPU or CPU
+performance, the selected model and the length of the recording.
+
+Установщик пока не подписан сертификатом, поэтому SmartScreen может показать
+предупреждение «Неизвестный издатель». Скачивайте EXE только из Releases этого
+репозитория; контрольная сумма указана на странице релиза.
+
+## Linux
 
 ```bash
 git clone https://github.com/nyavke/voice-input.git
@@ -18,7 +43,7 @@ cd voice-input
 ```
 
 Запускайте скрипт от обычного пользователя. `--dry-run` покажет план без
-изменений. Установщик определит дистрибутив, окружение и Wayland/X11. В конце он
+изменений. Установщик определит дистрибутив, окружение и Wayland/X11, а в конце
 крупно напечатает настроенную горячую клавишу.
 
 Run the script as your normal user. `--dry-run` changes nothing. The installer
@@ -28,15 +53,16 @@ hotkey at the end.
 ## Использование / Usage
 
 1. Поставьте курсор в нужное поле.
-2. Нажмите горячую клавишу, напечатанную установщиком.
+2. Нажмите горячую клавишу из настроек.
 3. Говорите и сделайте короткую паузу. Текст вставится сам.
 4. Нажмите клавишу ещё раз, чтобы остановить запись раньше.
 
-Focus a text field, press the printed hotkey, speak and pause. Open `Voice Input`
-from the app menu for settings, or run `voice-input --settings`.
+Focus a text field, press the configured hotkey, speak and pause. Open Voice
+Input from the Start/app menu to change the language, model, microphone or
+hotkey.
 
-Из каталога проекта приложение можно открыть командой `./run.sh`.
-From the project directory, run `./run.sh` to open the app.
+В Linux приложение также можно открыть командой `voice-input --settings` или
+`./run.sh` из каталога проекта.
 
 | Режим / Mode | Результат / Result |
 | --- | --- |
@@ -50,18 +76,25 @@ listed.
 
 ## Совместимость / Compatibility
 
+- Windows 10 22H2 и Windows 11, x64
 - Arch/CachyOS/Manjaro, Debian/Ubuntu/Mint, Fedora, openSUSE и Void
 - Wayland и X11
 - Hyprland/caelestia, Sway, i3 и GNOME с нативной горячей клавишей
-- KDE, Cinnamon, XFCE и другие окружения через `evdev` fallback
+- KDE, Cinnamon, XFCE и другие Linux-окружения через `evdev` fallback
 
-Нужен Python 3.9 или новее. Alpine/musl пока не поддерживается, потому что
-необходимые Python wheels для musl отсутствуют.
-
-Python 3.9 or newer is required. Alpine/musl is not supported yet because the
-required Python wheels are unavailable for musl.
+Для Linux нужен Python 3.9 или новее. Alpine/musl пока не поддерживается из-за
+отсутствия необходимых wheels. Windows-установщик уже содержит Python и все
+зависимости.
 
 ## Диагностика / Diagnostics
+
+Windows пишет лог сюда:
+
+```text
+%LOCALAPPDATA%\Voice Input\logs\voice-input.log
+```
+
+Linux-команды:
 
 ```bash
 voice-input --diag
@@ -69,10 +102,12 @@ voice-input --toggle
 voice-input --quit
 ```
 
-Если `~/.local/bin` ещё не входит в `PATH`, используйте `./voice-input`. Установка
-и первый запуск могут занять больше времени из-за загрузки модели.
-
 ## Удаление / Uninstall
+
+В Windows откройте «Параметры → Приложения → Установленные приложения → Voice
+Input → Удалить». Удаление предложит отдельно стереть настройки и модели.
+
+В Linux:
 
 ```bash
 ./uninstall.sh --dry-run
@@ -82,13 +117,10 @@ voice-input --quit
 Обычное удаление сохраняет настройки, модели и общие системные пакеты. Команда
 `./uninstall.sh --purge` также удаляет настройки и кэш приложения.
 
-The normal uninstall keeps settings, models and shared system packages. Add
-`--purge` to remove the app settings and cache too.
-
 ## Ошибки / Bugs
 
 Создайте [GitHub issue](https://github.com/nyavke/voice-input/issues/new/choose)
 или напишите в Telegram: [@nyavke](https://t.me/nyavke).
 
-Please include your distro, desktop, Wayland/X11 and the output of
-`voice-input --diag`.
+Укажите Windows/Linux, версию системы и приложите Windows-лог или вывод
+`voice-input --diag` в Linux.
