@@ -5,8 +5,10 @@ import QtQuick.Window
 import QtQuick.Effects
 import QtQuick.Controls as Controls
 
-// Компактный оверлей Voice Input: тёмное стекло, янтарный акцент и два живых
-// состояния — волна во время записи и курсор во время ввода текста.
+// «Пилюля» — стеклянный оверлей снизу по центру. Где возможно, позицию/размер
+// задаёт compositor. Тема: тёмное дымчатое стекло, янтарный акцент, глубина.
+// Раскрытие настроек — ЕДИНАЯ поверхность: пилюля физически вырастает вверх в
+// карточку и ужимается обратно (без отдельной панели).
 Window {
     id: win
     readonly property bool wantVisible: backend.appState !== "idle" || backend.expanded
@@ -50,6 +52,7 @@ Window {
 
     readonly property bool recording: backend.appState === "recording"
     readonly property bool processing: backend.appState === "processing"
+    readonly property bool typing: backend.appState === "typing"
     readonly property bool atTop: backend.pillPosition === "top"   // пилюля сверху/снизу экрана
     // Python передаёт этот rect в QWindow.setMask: прозрачная часть окна не
     // перехватывает клики по приложениям под высокой 960px-поверхностью.
@@ -117,45 +120,48 @@ Window {
             anchors.topMargin: 18
             anchors.bottomMargin: 18
 
-            readonly property real collapsedW: 244
+            readonly property real collapsedW: win.recording ? 312 : ((win.processing || win.typing) ? 232 : 200)
             // На высоком экране карточка равна контенту. На низком оставляет
             // безопасные поля, а прокручивается только область под вкладками.
             readonly property real expandedH: 138 + panes.height
-            readonly property real maxExpandedH: Math.max(64, parent.height - 36)
+            readonly property real maxExpandedH: Math.max(58, parent.height - 36)
             width: win.cardOpen ? (parent.width - 24) : collapsedW
-            height: win.cardOpen ? Math.min(expandedH, maxExpandedH) : 64
-            radius: win.cardOpen ? 26 : 18
+            height: win.cardOpen ? Math.min(expandedH, maxExpandedH) : 58
+            radius: win.cardOpen ? 26 : 29
             antialiasing: true
             color: win.glass
-            border.width: win.cardOpen ? 1 : 1.25
+            border.width: win.cardOpen ? 1 : 1.5
             border.color: win.cardOpen ? win.rim
-                          : Qt.rgba(win.accent.r, win.accent.g, win.accent.b,
-                                    win.recording ? 0.72 : 0.36)
-            opacity: (win.recording || win.processing || backend.expanded || win.cardOpen) ? 1 : 0
+                          : ((win.recording || win.processing || win.typing)
+                             ? Qt.rgba(win.accent.r,win.accent.g,win.accent.b,0.85)
+                             : win.rim)
+            opacity: (win.recording || win.processing || win.typing
+                      || backend.expanded || win.cardOpen) ? 1 : 0
 
             Behavior on width { NumberAnimation { duration: win.cardOpen ? 260 : 200; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
             Behavior on height { NumberAnimation { duration: win.cardOpen ? 260 : 200; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
-            Behavior on radius { NumberAnimation { duration: 220; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
-            Behavior on opacity { NumberAnimation { duration: win.cardOpen ? 180 : 0; easing.type: Easing.OutCubic } }
+            Behavior on radius { NumberAnimation { duration: 240; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
+            Behavior on border.color { ColorAnimation { duration: 220 } }
+            Behavior on opacity { NumberAnimation { duration: 260 } }
 
             // глубина / свечение — один эффект, параметры от состояния
-            layer.enabled: win.cardOpen || win.recording || win.processing
+            layer.enabled: win.cardOpen || win.recording || win.processing || win.typing
             layer.effect: MultiEffect {
                 shadowEnabled: true
                 shadowColor: win.cardOpen ? "#000000" : win.accent
-                shadowVerticalOffset: win.cardOpen ? 8 : 2
+                shadowVerticalOffset: win.cardOpen ? 8 : 0
                 shadowBlur: 1.0
-                blurMax: win.cardOpen ? 28 : (win.recording ? 34 : 24)
-                shadowOpacity: win.cardOpen ? 0.5 : (win.recording ? 0.38 : 0.22)
+                blurMax: win.cardOpen ? 28 : (win.recording ? 44 : 22)
+                shadowOpacity: win.cardOpen ? 0.5 : (win.recording ? 0.6 : 0.3)
             }
 
             // глянцевый верхний блик
             Rectangle {
                 anchors.fill: parent; radius: parent.radius
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, win.cardOpen ? 0.06 : 0.045) }
-                    GradientStop { position: win.cardOpen ? 0.28 : 0.62; color: Qt.rgba(1, 1, 1, 0.0) }
-                    GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, win.cardOpen ? 0.06 : 0.12) }
+                    GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.06) }
+                    GradientStop { position: win.cardOpen ? 0.28 : 0.55; color: Qt.rgba(1, 1, 1, 0.0) }
+                    GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, win.cardOpen ? 0.06 : 0.0) }
                 }
             }
 
@@ -555,104 +561,86 @@ Window {
             }
             // ↑ panes Column / cardContent Item
 
-            // ============ КОМПАКТНЫЙ СТАТУС VOICE INPUT ============
+            // ============ СОДЕРЖИМОЕ ПИЛЮЛИ (низ, гаснет при раскрытии) ============
             Item {
                 id: pillContent
                 objectName: "statusCardContent"
-                anchors.fill: parent
+                anchors.left: parent.left; anchors.right: parent.right
+                anchors.top: win.atTop ? parent.top : undefined
+                anchors.bottom: win.atTop ? undefined : parent.bottom
+                height: 58
                 opacity: win.cardOpen ? 0 : 1
                 visible: opacity > 0.01
-                Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
+                // индикатор-точка
                 Rectangle {
-                    id: activityBadge
-                    anchors.left: parent.left; anchors.leftMargin: 13
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 40; height: 40; radius: 13
-                    color: win.accentDim
-                    border.width: 1
-                    border.color: Qt.rgba(win.accent.r, win.accent.g, win.accent.b, 0.24)
+                    id: dot
+                    anchors.left: parent.left; anchors.leftMargin: 22; anchors.verticalCenter: parent.verticalCenter
+                    width: 10; height: 10; radius: 5
+                    color: win.recording ? win.accent
+                                         : ((win.processing || win.typing) ? "#ffcf99" : Qt.rgba(1,1,1,0.25))
+                    Behavior on color { ColorAnimation { duration: 200 } }
+                }
+                SequentialAnimation {
+                    running: win.recording; loops: Animation.Infinite
+                    NumberAnimation { target: dot; property: "scale"; to: 1.55; duration: 550; easing.type: Easing.InOutSine }
+                    NumberAnimation { target: dot; property: "scale"; to: 1.0; duration: 550; easing.type: Easing.InOutSine }
+                    onStopped: dot.scale = 1
+                }
+                SequentialAnimation {
+                    running: win.processing || win.typing; loops: Animation.Infinite
+                    NumberAnimation { target: dot; property: "opacity"; to: 0.3; duration: 420 }
+                    NumberAnimation { target: dot; property: "opacity"; to: 1.0; duration: 420 }
+                    onStopped: dot.opacity = 1
+                }
 
+                // центр: волна / статус
+                Item {
+                    anchors.left: dot.right; anchors.leftMargin: 12
+                    anchors.right: gear.left; anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: parent.height
                     Waveform {
                         objectName: "statusWave"
-                        visible: win.recording
                         anchors.centerIn: parent
-                        width: implicitWidth; height: 16
-                        bars: 5
+                        width: Math.min(parent.width, implicitWidth)
                         active: win.recording
                         level: backend.level
                         barColor: win.accent
+                        opacity: win.recording ? 1 : 0
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
                     }
-
+                    Text {
+                        id: processingText
+                        objectName: "processingText"
+                        anchors.centerIn: parent
+                        text: "Распознаю…"
+                        color: win.ink; font.family: win.ui; font.pixelSize: 13
+                        opacity: win.processing ? 1 : 0
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                    }
                     Row {
                         anchors.centerIn: parent
-                        visible: win.processing
+                        opacity: win.typing ? 1 : 0
                         spacing: 3
-                        Repeater {
-                            model: 3
-                            Rectangle {
-                                id: typingDot
-                                required property int index
-                                width: 3; height: 3; radius: 1.5
-                                color: win.accent
-                                opacity: 0.28
-                                SequentialAnimation on opacity {
-                                    running: win.processing
-                                    loops: Animation.Infinite
-                                    PauseAnimation { duration: typingDot.index * 110 }
-                                    NumberAnimation { to: 1; duration: 180; easing.type: Easing.OutCubic }
-                                    NumberAnimation { to: 0.28; duration: 240; easing.type: Easing.InCubic }
-                                    PauseAnimation { duration: (2 - typingDot.index) * 110 }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Item {
-                    anchors.left: activityBadge.right; anchors.leftMargin: 11
-                    anchors.right: gear.left; anchors.rightMargin: 8
-                    anchors.verticalCenter: parent.verticalCenter
-                    height: 40
-
-                    Text {
-                        id: compactBrand
-                        objectName: "statusTitle"
-                        anchors.left: parent.left; anchors.top: parent.top
-                        text: "VOICE INPUT"
-                        color: win.accent
-                        font.family: win.mono
-                        font.pixelSize: 9
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: 1.1
-                    }
-
-                    Row {
-                        anchors.left: parent.left; anchors.bottom: parent.bottom
-                        height: 21
-                        spacing: 4
-
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
                         Text {
-                            id: compactStatusText
+                            id: typingText
                             objectName: "statusText"
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: win.recording ? "Слушаю речь" : "Ввожу текст"
-                            color: win.ink
-                            font.family: win.ui
-                            font.pixelSize: 14
-                            font.weight: Font.Medium
+                            text: "Ввожу…"
+                            color: win.ink; font.family: win.ui; font.pixelSize: 13
                         }
                         Rectangle {
                             id: typingCaret
                             objectName: "typingCaret"
-                            visible: win.processing
                             anchors.verticalCenter: parent.verticalCenter
                             width: 1.5; height: 14; radius: 1
                             color: win.accent
                         }
                         SequentialAnimation {
                             objectName: "typingCaretAnimation"
-                            running: win.processing
+                            running: win.typing
                             loops: Animation.Infinite
                             NumberAnimation { target: typingCaret; property: "opacity"; to: 0.16; duration: 420; easing.type: Easing.Linear }
                             NumberAnimation { target: typingCaret; property: "opacity"; to: 1; duration: 420; easing.type: Easing.Linear }
@@ -661,35 +649,28 @@ Window {
                     }
                 }
 
+                // шестерёнка
                 Rectangle {
                     id: gear
-                    anchors.right: parent.right; anchors.rightMargin: 11
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 30; height: 30; radius: 10
+                    anchors.right: parent.right; anchors.rightMargin: 13; anchors.verticalCenter: parent.verticalCenter
+                    width: 34; height: 34; radius: 17
                     color: gearMa.containsMouse ? win.fillHi : "transparent"
-                    scale: gearMa.pressed ? 0.94 : 1
-                    Behavior on color { ColorAnimation { duration: 120 } }
-                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                    scale: gearMa.pressed ? 0.9 : 1
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on scale { NumberAnimation { duration: 120 } }
                     Icon {
-                        anchors.centerIn: parent
-                        name: "gear"
-                        width: 16; height: 16; stroke: 1.5
+                        anchors.centerIn: parent; name: "gear"; width: 18; height: 18; stroke: 1.5
                         color: gearMa.containsMouse ? win.ink : win.sub
                     }
-                    MouseArea {
-                        id: gearMa
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: backend.expanded = true
-                    }
+                    MouseArea { id: gearMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: backend.expanded = true }
                 }
 
+                // клик по телу пилюли — старт/стоп
                 MouseArea {
+                    id: pillMa
                     anchors.left: parent.left; anchors.right: gear.left
                     anchors.top: parent.top; anchors.bottom: parent.bottom
-                    cursorShape: win.recording ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    enabled: win.recording
+                    cursorShape: Qt.PointingHandCursor
                     onClicked: backend.toggle()
                 }
             }

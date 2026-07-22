@@ -22,32 +22,31 @@ def test_status_card_and_short_screen_settings():
         window = engine.rootObjects()[0]
         surface = window.findChild(QObject, "surface")
         status = window.findChild(QObject, "statusCardContent")
-        title = window.findChild(QObject, "statusTitle")
         status_text = window.findChild(QObject, "statusText")
+        processing_text = window.findChild(QObject, "processingText")
         wave = window.findChild(QObject, "statusWave")
-        caret = window.findChild(QObject, "typingCaret")
         caret_animation = window.findChild(QObject, "typingCaretAnimation")
         prop = lambda obj, name: obj.property(name)
 
         backend._set_state("recording")
-        deadline = time.monotonic() + 0.2
+        deadline = time.monotonic() + 0.45
         while time.monotonic() < deadline:
             app.processEvents()
             time.sleep(0.01)
 
-        assert prop(surface, "width") == 244
-        assert prop(surface, "height") == 64
-        assert prop(surface, "radius") == 18
+        assert abs(prop(surface, "width") - 312) < 1
+        assert prop(surface, "height") == 58
+        assert prop(surface, "radius") == 29
         assert prop(status, "visible")
-        assert prop(title, "text") == "VOICE INPUT"
-        assert prop(status_text, "text") == "Слушаю речь"
-        assert prop(wave, "visible")
+        assert prop(wave, "active")
 
         backend._set_state("processing")
         app.processEvents()
-        assert prop(status_text, "text") == "Ввожу текст"
-        assert not prop(wave, "visible")
-        assert prop(caret, "visible")
+        assert prop(processing_text, "text") == "Распознаю…"
+
+        backend._set_state("typing")
+        app.processEvents()
+        assert prop(status_text, "text") == "Ввожу…"
         assert prop(caret_animation, "running")
 
         backend._set_state("idle")

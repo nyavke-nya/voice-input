@@ -5,7 +5,7 @@ AudioRecorder, SttEngine, TextInjector и дёргает их по состоя�
 
     idle --toggle--> recording --(VAD:тишина>silence_ms | toggle)--> processing
       ^                                                                  |
-      +---------------------------- вставка текста ----------------------+
+      +------------------------ typing <--- готовый текст ----------------+
 
 Сигналы из рабочих потоков (аудио/STT) эмитятся напрямую — PySide ставит их в
 очередь GUI-потока, так что дополнительной синхронизации не нужно.
@@ -119,7 +119,7 @@ class Backend(QObject):
 
     @Slot()
     def _do_toggle(self) -> None:
-        if self._state == "processing":
+        if self._state in ("processing", "typing"):
             return
         if self._state == "idle":
             self._set_state("recording")
@@ -145,6 +145,7 @@ class Backend(QObject):
             return
         proc_sec = time.perf_counter() - t0
         if text:
+            self._set_state("typing")
             inserted = self.injector.inject(text)
             try:
                 stats.record(self._stats, text, proc_sec, audio_sec)

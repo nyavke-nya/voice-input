@@ -21,7 +21,7 @@ def _wayland(on):
 def test_wayland_prefers_wtype():
     _wayland(True)
     _which(lambda t: t in ("wtype", "ydotool"))
-    assert ti._type_cmd("привет") == ["wtype", "--", "привет"]      # Unicode
+    assert ti._type_cmd("привет") == ["wtype", "-d", "8", "--", "привет"]
     assert ti._paste_key_cmd()[0] == "wtype"
 
 
@@ -43,7 +43,9 @@ def test_wayland_ydotool_uses_clipboard_for_unicode():
 def test_x11_uses_xdotool():
     _wayland(False)
     _which(lambda t: t == "xdotool")
-    assert ti._type_cmd("привет") == ["xdotool", "type", "--clearmodifiers", "--", "привет"]
+    assert ti._type_cmd("привет") == [
+        "xdotool", "type", "--delay", "8", "--clearmodifiers", "--", "привет",
+    ]
     assert ti._paste_key_cmd() == ["xdotool", "key", "--clearmodifiers", "ctrl+v"]
 
 
@@ -60,7 +62,7 @@ def test_wayland_keyboard_inject_calls_typer():
     _which(lambda t: t == "wtype")
     calls = []
     inj = TextInjector({"input_method": "keyboard"}, runner=lambda *a, **k: calls.append(a[0]))
-    assert inj.inject("тест") and calls == [["wtype", "--", "тест"]]
+    assert inj.inject("тест") and calls == [["wtype", "-d", "8", "--", "тест"]]
 
 
 def test_wayland_clipboard_copies_then_pastes():
