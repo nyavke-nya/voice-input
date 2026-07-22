@@ -22,6 +22,7 @@ DEFAULTS: dict = {
     "beam_size": 5,                   # ширина beam-search (5 = точнее, ~как дефолт whisper)
     "packs": ["profanity"],           # словарные пакеты biasing: "profanity" | "it" (см. vocab.py)
     "vocabulary": "",                 # свои hotwords через пробел (имена/термины/сленг)
+    "theme": 0,                       # индекс палитры 0..7 (см. themes в Main.qml)
 }
 
 _ALLOWED = {
@@ -80,6 +81,10 @@ def _sanitize(cfg: dict) -> dict:
         out["beam_size"] = min(10, max(1, int(out["beam_size"])))
     except (TypeError, ValueError):
         out["beam_size"] = DEFAULTS["beam_size"]
+    try:
+        out["theme"] = min(9, max(0, int(out["theme"])))  # 10 тем: индексы 0..9 (Main.qml)
+    except (TypeError, ValueError):
+        out["theme"] = DEFAULTS["theme"]
     return out
 
 
@@ -113,4 +118,7 @@ if __name__ == "__main__":
     assert _sanitize({"packs": "nope"})["packs"] == ["profanity"]
     assert _sanitize({"beam_size": 99})["beam_size"] == 10
     assert _sanitize({"beam_size": "x"})["beam_size"] == 5
+    assert _sanitize({"theme": 99})["theme"] == 9
+    assert _sanitize({"theme": -3})["theme"] == 0
+    assert _sanitize({"theme": "x"})["theme"] == 0
     print("config OK")

@@ -31,7 +31,7 @@ from .hotkey import canonical_combo, capture_once
 from .stt_engine import SttEngine
 from .text_injector import TextInjector
 
-VERSION = "0.1.2"
+VERSION = "1.1.0"
 _WIN = sys.platform.startswith("win")
 
 RELEASES_API = "https://api.github.com/repos/nyavke-nya/voice-input/releases/latest"
@@ -338,6 +338,7 @@ class Backend(QObject):
     inputMethod = Property(
         str, *_mk("input_method", {"keyboard", "clipboard"}), notify=settingsChanged
     )
+    theme = Property(int, *_mk("theme", set(range(10))), notify=settingsChanged)
 
     # -- словарные пакеты biasing (Мат / IT): включаются чипами, без ввода текста
     #    (окно без фокуса на Wayland — печатать в него нельзя) --

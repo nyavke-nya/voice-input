@@ -180,6 +180,20 @@ def _self_test() -> int:
 
         hotkey.to_pynput(cfg["hotkey"])
         assert paths.icon_path() is not None, "нет voice-input.ico"
+
+    # Реально грузим QML offscreen: доказывает, что QML-модули Qt (QtQuick,
+    # QtQuick.Controls, QtQuick.Effects) есть в сборке и Main.qml валиден. Это
+    # страхует урезание Qt в voice_input.spec: срезали лишний модуль -> тут падаем.
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtCore import QUrl
+    from PySide6.QtGui import QGuiApplication
+    from PySide6.QtQml import QQmlApplicationEngine
+
+    _app = QGuiApplication.instance() or QGuiApplication([])
+    _engine = QQmlApplicationEngine()
+    _engine.load(QUrl.fromLocalFile(str(paths.resource_path("qml", "Main.qml"))))
+    assert _engine.rootObjects(), "QML не загрузился — проверь QML-модули Qt в сборке"
+
     print("self-test OK")
     return 0
 

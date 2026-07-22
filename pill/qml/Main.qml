@@ -37,12 +37,27 @@ Window {
     readonly property string mono: monoFont.name
 
     // ---- палитра (дымчатое стекло) ----
-    readonly property color accent: "#ffb877"
-    readonly property color accentDim: Qt.rgba(1, 0.72, 0.47, 0.16)
+    // 8 тем: каждая задаёт акцент + тон стекла, остальное производно/нейтрально.
+    // Индекс хранит backend.theme; длина списка = верхняя граница клампа в config.py.
+    readonly property var themes: [
+        { name: "Янтарь",  accent: "#ffb877", glass: Qt.rgba(0.055, 0.055, 0.075, 0.9) },
+        { name: "Океан",   accent: "#6fd0ff", glass: Qt.rgba(0.040, 0.055, 0.080, 0.9) },
+        { name: "Мята",    accent: "#67e0b0", glass: Qt.rgba(0.040, 0.070, 0.060, 0.9) },
+        { name: "Роза",    accent: "#ff9bb5", glass: Qt.rgba(0.075, 0.050, 0.065, 0.9) },
+        { name: "Лаванда", accent: "#c3a6ff", glass: Qt.rgba(0.060, 0.055, 0.090, 0.9) },
+        { name: "Закат",   accent: "#ff8a6b", glass: Qt.rgba(0.080, 0.050, 0.050, 0.9) },
+        { name: "Лайм",    accent: "#c6e070", glass: Qt.rgba(0.055, 0.065, 0.045, 0.9) },
+        { name: "Лёд",     accent: "#9fb4d0", glass: Qt.rgba(0.050, 0.055, 0.070, 0.9) },
+        { name: "Фуксия",  accent: "#f78ad6", glass: Qt.rgba(0.072, 0.048, 0.070, 0.9) },
+        { name: "Золото",  accent: "#ffd27a", glass: Qt.rgba(0.072, 0.062, 0.040, 0.9) },
+    ]
+    readonly property var theme: themes[Math.min(themes.length - 1, Math.max(0, backend.theme))]
+    readonly property color accent: theme.accent
+    readonly property color accentDim: Qt.rgba(accent.r, accent.g, accent.b, 0.16)
     readonly property color ink: "#f5f2ee"
     readonly property color sub: "#9c96a2"
     readonly property color danger: "#f0908c"
-    readonly property color glass: Qt.rgba(0.055, 0.055, 0.075, 0.9)
+    readonly property color glass: theme.glass
     readonly property color rim: Qt.rgba(1, 1, 1, 0.10)
     readonly property color fill: Qt.rgba(1, 1, 1, 0.04)
     readonly property color fillHi: Qt.rgba(1, 1, 1, 0.09)
@@ -131,7 +146,9 @@ Window {
                           : ((win.recording || win.processing) ? Qt.rgba(win.accent.r,win.accent.g,win.accent.b,0.85) : win.rim)
             opacity: (win.recording || win.processing || backend.expanded || win.cardOpen) ? 1 : 0
 
-            Behavior on width { NumberAnimation { duration: win.cardOpen ? 260 : 200; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
+            // Раскрытие: ширина берётся мгновенно (иначе видно, как карточка «доезжает»
+            // до полной ширины). Анимируем только сворачивание и смену размера пилюли.
+            Behavior on width { enabled: !win.cardOpen; NumberAnimation { duration: 200; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
             Behavior on height { NumberAnimation { duration: win.cardOpen ? 260 : 200; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
             Behavior on radius { NumberAnimation { duration: 240; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
             Behavior on border.color { ColorAnimation { duration: 220 } }
@@ -200,7 +217,7 @@ Window {
                     id: tabs
                     anchors { left: parent.left; right: parent.right; top: header.bottom; leftMargin: 18; rightMargin: 18; topMargin: 16 }
                     height: 38
-                    readonly property real segW: (width - 8) / 3
+                    readonly property real segW: (width - 8) / 4
                     Rectangle { anchors.fill: parent; radius: height / 2; color: win.fill; border.color: Qt.rgba(1,1,1,0.05); border.width: 1 }
                     Rectangle {
                         id: tabHi
@@ -214,14 +231,14 @@ Window {
                     Row {
                         x: 4; width: parent.width - 8; height: parent.height
                         Repeater {
-                            model: [{ t: "Настройки", i: 0 }, { t: "Статистика", i: 1 }, { t: "История", i: 2 }]
+                            model: [{ t: "Настройки", i: 0 }, { t: "Статистика", i: 1 }, { t: "История", i: 2 }, { t: "Тема", i: 3 }]
                             Item {
                                 required property var modelData
                                 width: tabs.segW; height: tabs.height
                                 property bool on: surface.tab === modelData.i
                                 Text {
                                     anchors.centerIn: parent; text: modelData.t
-                                    font.family: win.ui; font.pixelSize: 13; font.weight: parent.on ? Font.DemiBold : Font.Medium
+                                    font.family: win.ui; font.pixelSize: 12; font.weight: parent.on ? Font.DemiBold : Font.Medium
                                     color: parent.on ? win.accent : win.sub
                                     scale: tabMa.pressed ? 0.95 : 1
                                     Behavior on color { ColorAnimation { duration: 180 } }
@@ -565,6 +582,50 @@ Window {
                                     }
                                     MouseArea { id: hma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: backend.copyHistory(index) }
                                 }
+                            }
+                        }
+
+                        // ==================== ТЕМА ====================
+                        Column {
+                            id: themePane
+                            visible: surface.tab === 3
+                            width: parent.width; spacing: 16
+
+                            Text { text: "ЦВЕТ ОФОРМЛЕНИЯ"; color: win.sub; font.family: win.ui; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 1.5 }
+
+                            Flow {
+                                width: parent.width; spacing: 14
+                                Repeater {
+                                    model: win.themes.length
+                                    Rectangle {
+                                        required property int index
+                                        width: 46; height: 46; radius: 23
+                                        property bool on: backend.theme === index
+                                        color: win.themes[index].glass
+                                        border.color: on ? win.themes[index].accent : Qt.rgba(1,1,1,0.10)
+                                        border.width: on ? 2 : 1
+                                        scale: swMa.pressed ? 0.9 : 1
+                                        Behavior on border.color { ColorAnimation { duration: 160 } }
+                                        Behavior on scale { NumberAnimation { duration: 120 } }
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 22; height: 22; radius: 11
+                                            color: win.themes[index].accent
+                                        }
+                                        MouseArea { id: swMa; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: backend.theme = index }
+                                    }
+                                }
+                            }
+
+                            Row {
+                                spacing: 8
+                                Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 12; height: 12; radius: 6; color: win.accent }
+                                Text { anchors.verticalCenter: parent.verticalCenter; text: win.theme.name; color: win.ink; font.family: win.ui; font.pixelSize: 14; font.weight: Font.DemiBold }
+                            }
+                            Text {
+                                width: parent.width; wrapMode: Text.WordWrap
+                                text: "Меняет цвет акцента и оттенок стекла во всём приложении."
+                                color: Qt.rgba(win.sub.r, win.sub.g, win.sub.b, 0.75); font.family: win.ui; font.pixelSize: 11
                             }
                         }
                     }
