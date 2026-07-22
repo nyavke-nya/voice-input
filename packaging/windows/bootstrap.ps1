@@ -9,11 +9,9 @@
 
   Или локально из репозитория:
     powershell -ExecutionPolicy Bypass -File packaging\windows\bootstrap.ps1
-    powershell -ExecutionPolicy Bypass -File packaging\windows\bootstrap.ps1 -Gpu:$false   # лёгкая CPU-сборка
 
   Требуется Windows 10 22H2+/11 (в них есть winget) и интернет.
 #>
-param([bool]$Gpu = $true)
 $ErrorActionPreference = "Stop"
 
 function Info($m) { Write-Host "[bootstrap] $m" -ForegroundColor Cyan }
@@ -101,7 +99,6 @@ if (-not $iscc) {
     Info "Inno Setup недоступен — соберу папку с VoiceInput.exe без installer."
     $skip = @("-SkipInstaller")
 }
-Info "сборка (GPU=$Gpu)…"
-$gpuArg = if ($Gpu) { "true" } else { "false" }
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $build -Gpu $gpuArg @skip
+Info "сборка компактного Setup (CUDA скачивается во время установки)…"
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $build @skip
 if ($LASTEXITCODE -ne 0) { throw "Сборка завершилась с кодом $LASTEXITCODE." }

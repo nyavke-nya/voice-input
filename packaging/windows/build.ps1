@@ -1,26 +1,22 @@
 ﻿#Requires -Version 5
 <#
-  Одна команда для воспроизводимой локальной сборки Voice Input под Windows.
+  Одна команда для компактной воспроизводимой сборки Voice Input под Windows.
 
-    powershell -ExecutionPolicy Bypass -File packaging\windows\build.ps1            # GPU (по умолчанию)
-    powershell -ExecutionPolicy Bypass -File packaging\windows\build.ps1 -Gpu:$false # лёгкая CPU-сборка
+    powershell -ExecutionPolicy Bypass -File packaging\windows\build.ps1
 
-  GPU-сборка вшивает CUDA-рантайм (~+1.5 ГБ) и включает NVIDIA при device: auto,
-  иначе молча падает на CPU (универсально). CPU-сборка — компактная, без CUDA.
+  CUDA не вшивается: на компьютере с NVIDIA установщик предлагает скачать
+  cuBLAS/cuDNN отдельно. Поэтому сам VoiceInputSetup.exe весит около 230 МБ.
 
   Требуется: Python 3.12 x64 в PATH и Inno Setup 6.3+ (ISCC.exe в PATH).
   Подпись — опционально: задай $env:PILL_PFX (путь к .pfx) и $env:PILL_PFX_PASSWORD.
 #>
 param(
-    [ValidateSet("true", "false", "1", "0")]
-    [string]$Gpu = "true",
     [switch]$SkipInstaller,
     [switch]$ValidateOnly
 )
 $ErrorActionPreference = "Stop"
-$gpuEnabled = $Gpu -in @("true", "1")
 if ($ValidateOnly) {
-    Write-Host "Parameters OK (GPU=$gpuEnabled)"
+    Write-Host "Parameters OK"
     return
 }
 function Assert-NativeSuccess([string]$Step) {
@@ -40,8 +36,8 @@ Assert-NativeSuccess "Создание venv"
 $py = Join-Path $venv "Scripts\python.exe"
 & $py -m pip install --upgrade pip
 Assert-NativeSuccess "Обновление pip"
-$req = if ($gpuEnabled) { "requirements-windows-gpu.txt" } else { "requirements-windows.txt" }
-Write-Host "Зависимости: $req  (GPU=$gpuEnabled)"
+$req = "requirements-windows.txt"
+Write-Host "Зависимости: $req (компактная CPU-база; NVIDIA скачивается при установке)"
 & $py -m pip install -r (Join-Path $here $req)
 Assert-NativeSuccess "Установка зависимостей"
 

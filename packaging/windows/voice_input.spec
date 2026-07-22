@@ -25,16 +25,8 @@ for pkg in ("PySide6", "faster_whisper", "ctranslate2", "onnxruntime", "sounddev
 hiddenimports += collect_submodules("pynput")
 hiddenimports += collect_submodules("pill")
 
-# GPU (опционально): если в venv стоят nvidia-*-cu12, вшить их DLL в корень бандла,
-# рядом с ctranslate2.dll, чтобы CUDA нашлась без установленного CUDA Toolkit.
-# Нет пакетов -> CPU-сборка, ветка молча пропускается.
-try:
-    from PyInstaller.utils.hooks import collect_dynamic_libs
-
-    for nv in ("nvidia.cublas", "nvidia.cudnn", "nvidia.cuda_runtime"):
-        binaries += [(src, ".") for src, _dest in collect_dynamic_libs(nv)]
-except Exception:
-    pass
+# CUDA намеренно не собирается внутрь Setup. На машине с NVIDIA установщик
+# скачивает официальный runtime с PyPI в отдельный каталог gpu-runtime.
 
 # Наши ресурсы: QML + встроенные шрифты + иконка (нужны и в source, и во frozen).
 datas += [(os.path.join(ROOT, "pill", "qml"), os.path.join("pill", "qml"))]

@@ -4,12 +4,6 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    inputs:
-      variant:
-        description: "Сборка: gpu (с CUDA-рантаймом, ~1.5 ГБ) или cpu (лёгкая)"
-        type: choice
-        options: [gpu, cpu]
-        default: gpu
 
 permissions:
   contents: read
@@ -50,7 +44,7 @@ jobs:
             }
           }
           & powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
-            packaging\windows\build.ps1 -Gpu true -ValidateOnly
+            packaging\windows\build.ps1 -ValidateOnly
           if ($LASTEXITCODE -ne 0) { throw "Windows PowerShell parameter binding failed" }
 
       - name: Source check
@@ -76,14 +70,8 @@ jobs:
         shell: pwsh
         env:
           PILL_PFX_PASSWORD: ${{ secrets.SIGN_PFX_PASSWORD }}
-          VARIANT: ${{ github.event.inputs.variant }}   # через env (без инъекции в скрипт)
         run: |
-          # push/PR -> быстрая CPU-сборка (шейкдаун пайплайна). GPU — ручной
-          # workflow_dispatch (там default=gpu). whitelist на два значения.
-          $variant = if ($env:VARIANT -eq "gpu") { "gpu" } else { "cpu" }
-          Write-Host "variant=$variant"
-          $gpuArg = if ($variant -eq "gpu") { "true" } else { "false" }
-          & packaging\windows\build.ps1 -Gpu $gpuArg
+          & packaging\windows\build.ps1
 
       - name: Upload installer
         uses: actions/upload-artifact@v4

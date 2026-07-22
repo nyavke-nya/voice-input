@@ -28,7 +28,7 @@ from .hotkey import canonical_combo, capture_once
 from .stt_engine import SttEngine
 from .text_injector import TextInjector
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 _WIN = sys.platform.startswith("win")
 
 

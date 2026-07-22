@@ -2,7 +2,7 @@
 ; Собирает dist\VoiceInput\ (результат PyInstaller) в один VoiceInputSetup.exe.
 
 #define AppName "Voice Input"
-#define AppVersion "0.1.0"
+#define AppVersion "0.1.1"
 #define AppExe "VoiceInput.exe"
 
 [Setup]
@@ -36,13 +36,43 @@ SolidCompression=yes
 Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "en"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+ru.NvidiaTask=Ускорение NVIDIA (скачать около 1,3 ГБ во время установки)
+en.NvidiaTask=NVIDIA acceleration (download about 1.3 GB during setup)
+ru.NvidiaGroup=Дополнительно:
+en.NvidiaGroup=Optional components:
+ru.NvidiaDownloading=Скачивание cuBLAS и cuDNN для NVIDIA (около 1,3 ГБ)...
+en.NvidiaDownloading=Downloading cuBLAS and cuDNN for NVIDIA (about 1.3 GB)...
+ru.NvidiaFailed=Компоненты NVIDIA скачать не удалось. Voice Input установлен и будет работать на процессоре. Позже можно снова запустить установщик.
+en.NvidiaFailed=The NVIDIA components could not be downloaded. Voice Input is installed and will work on the CPU. You can run Setup again later.
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "autostart"; Description: "Запускать Voice Input при входе в систему"; GroupDescription: "Автозапуск:"
+Name: "nvidiagpu"; Description: "{cm:NvidiaTask}"; GroupDescription: "{cm:NvidiaGroup}"; Flags: checkedonce; Check: HasNvidiaDriver
 
 [Files]
+; Маленький загрузчик извлекается только на время установки. Ставим первым,
+; чтобы SolidCompression не заставлял распаковывать весь onedir ради него.
+Source: "install-gpu-runtime.ps1"; Flags: dontcopy noencryption
 ; Весь onedir-каталог PyInstaller.
 Source: "..\..\dist\VoiceInput\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+
+[InstallDelete]
+; Удалить CUDA от старой 1,6-ГБ сборки и предыдущий отдельно скачанный runtime.
+Type: filesandordirs; Name: "{app}\gpu-runtime"
+Type: filesandordirs; Name: "{app}\nvidia"
+Type: filesandordirs; Name: "{app}\_internal\nvidia"
+Type: files; Name: "{app}\cublas*.dll"
+Type: files; Name: "{app}\cudnn*.dll"
+Type: files; Name: "{app}\cudart*.dll"
+Type: files; Name: "{app}\nvrtc*.dll"
+Type: files; Name: "{app}\nvJitLink*.dll"
+Type: files; Name: "{app}\_internal\cublas*.dll"
+Type: files; Name: "{app}\_internal\cudnn*.dll"
+Type: files; Name: "{app}\_internal\cudart*.dll"
+Type: files; Name: "{app}\_internal\nvrtc*.dll"
+Type: files; Name: "{app}\_internal\nvJitLink*.dll"
 
 [Icons]
 ; Все ярлыки — только на установленный EXE (иконка вшита в него PyInstaller'ом,
@@ -59,6 +89,37 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{app}\{#AppExe}"; Description: "Запустить Voice Input"; Flags: nowait postinstall skipifsilent
 
 [Code]
+function HasNvidiaDriver: Boolean;
+begin
+  { nvcuda.dll ставится драйвером NVIDIA; без него CUDA-рантайм бесполезен. }
+  Result := FileExists(ExpandConstant('{sys}\nvcuda.dll'));
+end;
+
+procedure InstallNvidiaRuntime;
+var
+  ResultCode: Integer;
+  ScriptPath, Params: string;
+  Started: Boolean;
+begin
+  if not WizardIsTaskSelected('nvidiagpu') then
+    Exit;
+
+  ExtractTemporaryFile('install-gpu-runtime.ps1');
+  ScriptPath := ExpandConstant('{tmp}\install-gpu-runtime.ps1');
+  Params := '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File ' +
+    AddQuotes(ScriptPath) + ' -AppDir ' + AddQuotes(ExpandConstant('{app}'));
+  WizardForm.StatusLabel.Caption := ExpandConstant('{cm:NvidiaDownloading}');
+  ResultCode := -1;
+  Started := Exec(
+    ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if (not Started) or (ResultCode <> 0) then
+  begin
+    Log('NVIDIA runtime installer failed, exit=' + IntToStr(ResultCode));
+    MsgBox(ExpandConstant('{cm:NvidiaFailed}'), mbError, MB_OK);
+  end;
+end;
+
 { Аккуратно завершить работающий экземпляр штатной командой (не убивая
   посторонние процессы) перед заменой файлов и перед удалением. }
 procedure StopRunning;
@@ -80,6 +141,12 @@ begin
   Result := '';
 end;
 
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    InstallNvidiaRuntime;
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
@@ -88,6 +155,8 @@ begin
     выключена, кнопка по умолчанию — «Нет»). }
   else if CurUninstallStep = usPostUninstall then
   begin
+    { Файлы, скачанные во время установки, не входят в статический manifest. }
+    DelTree(ExpandConstant('{app}\gpu-runtime'), True, True, True);
     if MsgBox('Удалить также настройки, статистику и скачанные модели Voice Input?' + #13#10 +
               '(по умолчанию они сохраняются)',
               mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then

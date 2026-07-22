@@ -16,11 +16,16 @@ your computer.
 
 [Скачать VoiceInputSetup.exe / Download for Windows](https://github.com/nyavke/voice-input/releases/latest/download/VoiceInputSetup.exe)
 
-Подходят Windows 10 22H2 и Windows 11 x64. Python и остальные зависимости уже
-включены в установщик.
+Подходят Windows 10 22H2 и Windows 11 x64. Сам Setup занимает примерно 230–300 МБ;
+Python и всё для работы на CPU уже внутри.
 
 1. Скачайте и запустите `VoiceInputSetup.exe`.
-2. Откройте Voice Input через меню `Пуск` или ярлык на рабочем столе.
+2. На ПК с NVIDIA оставьте включённым пункт ускорения: установщик скачает около
+   1,3 ГБ cuBLAS/cuDNN. CUDA Toolkit отдельно не нужен.
+3. Откройте Voice Input через меню `Пуск` или ярлык на рабочем столе.
+
+On an NVIDIA PC, leave the acceleration option enabled. Setup downloads about
+1.3 GB of GPU libraries during installation; a separate CUDA Toolkit is not required.
 
 Установщик пока не подписан сертификатом. Если SmartScreen покажет неизвестного
 издателя, нажмите `Подробнее` и `Выполнить в любом случае`. SHA-256 опубликован
@@ -82,8 +87,9 @@ Whisper умеет переводить только на английский, 
 Voice Input автоматически использует совместимую NVIDIA GPU, а без неё работает
 на CPU. Маленькие модели быстрее, большие обычно точнее.
 
-Windows-установщик занимает около 1.6 ГБ, потому что содержит CUDA, cuBLAS и
-cuDNN. Linux-установщик загружает CUDA-библиотеки только при обнаружении NVIDIA.
+Windows Setup не содержит CUDA: на ПК с NVIDIA он скачивает нужные библиотеки во
+время установки. Без NVIDIA приложение ничего лишнего не загружает и работает на
+CPU. Linux-установщик также загружает CUDA-библиотеки только при обнаружении NVIDIA.
 
 ## Логи и удаление / Logs and uninstall
 

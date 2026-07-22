@@ -16,6 +16,10 @@ from .vocab import build_bias
 # и редкой лексике, ~3ГБ, качается при первом выборе).
 _MODEL_ALIAS = {"large": "large-v3"}
 
+# os.add_dll_directory действует, пока жив возвращённый handle. Сохраняем его на
+# весь процесс, чтобы delay-load CUDA не потерял каталог после прогрева модели.
+_WINDOWS_DLL_DIR_HANDLES: dict[str, object] = {}
+
 # Фразы, которые Whisper выдумывает на тишине/шуме (ru+en). Сравнение по
 # нормализованному тексту (нижний регистр, без пунктуации по краям).
 _HALLUCINATIONS = {
@@ -104,33 +108,40 @@ class SttEngine:
         их без установленного CUDA Toolkit / LD_LIBRARY_PATH. Без них GPU не поедет.
 
         Linux: .so через RTLD_GLOBAL. Windows: DLL лежат в nvidia/*/bin — добавляем
-        каталоги в поиск DLL и предзагружаем. Во frozen-сборке пакета nvidia нет —
-        DLL уже уложены рядом с ctranslate2, поиск идёт из _MEIPASS."""
+        каталоги в поиск DLL и предзагружаем. Windows Setup скачивает DLL отдельно
+        в gpu-runtime рядом с VoiceInput.exe."""
         import ctypes
         import glob
         import os
         import sys
 
+        is_win = sys.platform.startswith("win")
+
+        def load_windows_dir(bindir: str) -> None:
+            if not os.path.isdir(bindir):
+                return
+            if bindir not in _WINDOWS_DLL_DIR_HANDLES:
+                try:
+                    _WINDOWS_DLL_DIR_HANDLES[bindir] = os.add_dll_directory(bindir)
+                except OSError:
+                    pass
+            for dll in sorted(glob.glob(os.path.join(bindir, "*.dll"))):
+                try:
+                    ctypes.WinDLL(dll)
+                except OSError:
+                    pass
+
+        if is_win and paths.is_frozen():
+            load_windows_dir(os.path.join(os.path.dirname(sys.executable), "gpu-runtime"))
+
         try:
             import nvidia  # namespace-пакет: путь(и) в __path__, __file__ = None
         except ImportError:
             return
-        is_win = sys.platform.startswith("win")
         for base in list(getattr(nvidia, "__path__", [])):
             if is_win:
-                for sub in ("cublas", "cudnn", "cuda_runtime"):
-                    bindir = os.path.join(base, sub, "bin")
-                    if not os.path.isdir(bindir):
-                        continue
-                    try:
-                        os.add_dll_directory(bindir)  # чтобы delay-load нашёл DLL
-                    except OSError:
-                        pass
-                    for dll in sorted(glob.glob(os.path.join(bindir, "*.dll"))):
-                        try:
-                            ctypes.WinDLL(dll)
-                        except OSError:
-                            pass
+                for sub in ("cublas", "cudnn", "cuda_runtime", "cuda_nvrtc"):
+                    load_windows_dir(os.path.join(base, sub, "bin"))
             else:
                 for pat in ("cublas/lib/libcublasLt.so*", "cublas/lib/libcublas.so*",
                             "cudnn/lib/libcudnn*.so*"):
@@ -148,6 +159,7 @@ class SttEngine:
         if dev == "cuda":
             return [("cuda", "float16"), ("cpu", "int8")]
         try:  # auto: взять GPU, если ctranslate2 его видит (проверено на RTX 3060)
+            self._preload_cuda_libs()
             import ctranslate2
 
             if ctranslate2.get_cuda_device_count() > 0:
