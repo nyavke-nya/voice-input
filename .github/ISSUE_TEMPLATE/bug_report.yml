@@ -1,0 +1,61 @@
+name: Ошибка / Bug report
+description: Сообщить об ошибке Voice Input / Report a Voice Input bug
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Не публикуйте пароли, токены и другие секреты.
+        Do not post passwords, tokens or other secrets.
+
+  - type: input
+    id: distro
+    attributes:
+      label: Дистрибутив / Distro
+      placeholder: CachyOS, Ubuntu 24.04, Fedora 43
+    validations:
+      required: true
+
+  - type: input
+    id: desktop
+    attributes:
+      label: Окружение / Desktop
+      placeholder: Hyprland, GNOME, KDE Plasma
+    validations:
+      required: true
+
+  - type: dropdown
+    id: session
+    attributes:
+      label: Сеанс / Session
+      options:
+        - Wayland
+        - X11
+        - Не знаю / Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Диагностика / Diagnostics
+      description: Вывод команды `voice-input --diag`
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Что произошло / What happened
+      description: Что вы делали, чего ожидали и что получили.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Логи / Logs
+      description: Добавьте связанные ошибки или логи, если они есть.
+      render: shell

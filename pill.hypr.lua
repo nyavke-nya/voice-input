@@ -1,17 +1,17 @@
--- Референс Hyprland Voice Input. Установщик ставит этот блок сам в
--- ~/.config/caelestia/hypr-user.lua при первом запуске и при смене хоткея.
+-- Референс Voice Input для Hyprland 0.55+. Установщик ставит этот блок сам в
+-- пользовательский Lua-конфиг при первом запуске и при смене хоткея.
 -- Файл здесь — на случай ручной установки или другого расположения конфига.
 --
 -- Замени "GRAVE" на свой бинд (имя XKB-keysym: A, SPACE, F9, GRAVE=backtick…),
--- а путь python — на свой venv.
+-- а путь /home/user/voice-input — на каталог репозитория.
 
 -- >>> pill managed integration >>>
 hl.on("hyprland.start", function()
-    hl.exec_cmd("env PYTHONPATH=/home/user/hyprland-voice-input /home/user/hyprland-voice-input/.venv/bin/python -m pill")
+    hl.exec_cmd("/home/user/voice-input/voice-input")
 end)  -- фоновый демон
 
 hl.bind("GRAVE",
-    hl.dsp.exec_cmd("env PYTHONPATH=/home/user/hyprland-voice-input /home/user/hyprland-voice-input/.venv/bin/python -m pill --toggle"),
+    hl.dsp.exec_cmd("/home/user/voice-input/voice-input --toggle"),
     { release = true })
 
 hl.window_rule({
@@ -33,10 +33,10 @@ hl.window_rule({
 
 
 ---------------------------------------------------------------------------
--- Для vanilla-Hyprland (обычный hyprland.conf, БЕЗ Lua) эквивалент такой:
+-- Для Hyprland <= 0.54 (старый hyprland.conf) эквивалент такой:
 --
---   exec-once = env PYTHONPATH=/home/user/hyprland-voice-input /home/user/hyprland-voice-input/.venv/bin/python -m pill
---   bind = , grave, exec, env PYTHONPATH=/home/user/hyprland-voice-input /home/user/hyprland-voice-input/.venv/bin/python -m pill --toggle
+--   exec-once = /home/user/voice-input/voice-input
+--   bindr = , grave, exec, /home/user/voice-input/voice-input --toggle
 --   windowrulev2 = float,      class:^(pill)$
 --   windowrulev2 = pin,        class:^(pill)$
 --   windowrulev2 = noborder,   class:^(pill)$

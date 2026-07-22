@@ -9,6 +9,7 @@ def test_to_hypr():
     assert hypr.to_hypr("win+r") == "SUPER + R"
     assert hypr.to_hypr("`") == "GRAVE"          # спецсимвол -> имя keysym
     assert hypr.to_hypr("super+`") == "SUPER + GRAVE"
+    assert hypr.to_hypr("ctrl+backspace") == "CTRL + BackSpace"
 
 
 def test_block_has_markers_and_rule():

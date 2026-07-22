@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+voice_input_script=$(readlink -f "$0" 2>/dev/null || printf '%s\n' "$0")
+voice_input_root=$(CDPATH='' cd -- "$(dirname -- "$voice_input_script")" && pwd -P)
+voice_input_python="$voice_input_root/.venv/bin/python"
+if [ ! -x "$voice_input_python" ]; then
+    voice_input_python=$(command -v python3 2>/dev/null || true)
+fi
+if [ -z "$voice_input_python" ] \
+        || ! "$voice_input_python" -c 'import sys; raise SystemExit(sys.version_info < (3, 9))'; then
+    printf '%s\n' 'Voice Input requires Python 3.9+ / Нужен Python 3.9+' >&2
+    exit 1
+fi
+exec env PYTHONPATH="$voice_input_root" "$voice_input_python" -m pill "$@"

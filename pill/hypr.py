@@ -1,4 +1,4 @@
-"""Нативная интеграция с Lua-конфигом Hyprland (caelestia).
+"""Нативная интеграция с Lua-конфигом Hyprland.
 
 В Hyprland 0.55 с Lua-конфигом динамические windowrulev2/keyword не работают, а
 правильный способ сделать плавающий оверлей — это window_rule.
@@ -34,6 +34,16 @@ _KEYSYM = {
     "semicolon": "SEMICOLON", "apostrophe": "APOSTROPHE", "comma": "COMMA",
     "dot": "PERIOD", "slash": "SLASH", "backslash": "BACKSLASH",
     "space": "SPACE", "enter": "RETURN", "esc": "ESCAPE",
+    "tab": "Tab", "backspace": "BackSpace", "delete": "Delete",
+    "insert": "Insert", "home": "Home", "end": "End",
+    "left": "Left", "right": "Right", "up": "Up", "down": "Down",
+    "pageup": "Page_Up", "pagedown": "Page_Down",
+    "capslock": "Caps_Lock", "numlock": "Num_Lock",
+    "scrolllock": "Scroll_Lock", "pause": "Pause", "sysrq": "Print",
+    "menu": "Menu", "compose": "Multi_key", "mute": "XF86AudioMute",
+    "volumedown": "XF86AudioLowerVolume", "volumeup": "XF86AudioRaiseVolume",
+    "playpause": "XF86AudioPlay", "nextsong": "XF86AudioNext",
+    "previoussong": "XF86AudioPrev",
 }
 
 
@@ -64,7 +74,7 @@ def _block(combo: str, position: str = "bottom") -> str:
     move_y = "monitor_h*0.012" if position == "top" else "monitor_h*0.985-window_h"
     return "\n".join([
         BEGIN,
-        "-- Управляется Hyprland Voice Input. Хоткей меняется в настройках.",
+        "-- Управляется Voice Input. Хоткей меняется в настройках.",
         f'hl.on("hyprland.start", function() hl.exec_cmd({_lua_string(_cmd())}) end)  -- фоновый демон',
         f'hl.bind({_lua_string(to_hypr(combo))}, hl.dsp.exec_cmd({_lua_string(_cmd("--toggle"))}), {{ release = true }})',
         "hl.window_rule({",
@@ -91,26 +101,29 @@ def _block(combo: str, position: str = "bottom") -> str:
     ])
 
 
-def install(combo: str, position: str = "bottom") -> bool:
-    """Вписать/обновить управляемый блок в hypr-user.lua и перезагрузить Hyprland.
-    Возвращает False, если конфиг caelestia не найден (тогда см. README)."""
-    lua = user_lua()
+def install(combo: str, position: str = "bottom", path: Optional[Path] = None) -> bool:
+    """Вписать/обновить управляемый блок в Lua-конфиг и reload Hyprland.
+
+    Без ``path`` используется безопасная пользовательская точка caelestia.
+    Явный путь нужен универсальному установщику для vanilla Hyprland 0.55+.
+    """
+    lua = Path(path).expanduser() if path is not None else user_lua()
     if lua is None:
         return False
     try:
         text = lua.read_text(encoding="utf-8")
         block = _block(combo, position)
     except (OSError, ValueError) as e:
-        print(f"[pill] интеграция Hyprland не обновлена: {e}")
+        print(f"[voice-input] интеграция Hyprland не обновлена: {e}")
         return False
     has_begin, has_end = BEGIN in text, END in text
     if has_begin != has_end:
-        print("[pill] интеграция Hyprland не обновлена: найден только один маркер")
+        print("[voice-input] интеграция Hyprland не обновлена: найден только один маркер")
         return False
     if has_begin:
         start, end = text.index(BEGIN), text.index(END)
         if end < start:
-            print("[pill] интеграция Hyprland не обновлена: маркеры переставлены")
+            print("[voice-input] интеграция Hyprland не обновлена: маркеры переставлены")
             return False
         updated = text[:start] + block + text[end + len(END):]
     else:
@@ -119,9 +132,36 @@ def install(combo: str, position: str = "bottom") -> bool:
         try:
             lua.write_text(updated, encoding="utf-8")
         except OSError as e:
-            print(f"[pill] интеграция Hyprland не записана: {e}")
+            print(f"[voice-input] интеграция Hyprland не записана: {e}")
             return False
         reload()
+    return True
+
+
+def uninstall(path: Optional[Path] = None) -> bool:
+    """Удалить только управляемый блок, не затрагивая остальной Lua-конфиг."""
+    lua = Path(path).expanduser() if path is not None else user_lua()
+    if lua is None or not lua.exists():
+        return True
+    try:
+        text = lua.read_text(encoding="utf-8")
+    except OSError as e:
+        print(f"[voice-input] интеграция Hyprland не прочитана: {e}")
+        return False
+    has_begin, has_end = BEGIN in text, END in text
+    if not has_begin and not has_end:
+        return True
+    if has_begin != has_end or text.index(END) < text.index(BEGIN):
+        print("[voice-input] интеграция Hyprland не удалена: повреждены маркеры")
+        return False
+    start, end = text.index(BEGIN), text.index(END) + len(END)
+    updated = (text[:start].rstrip() + "\n" + text[end:].lstrip("\n")).lstrip("\n")
+    try:
+        lua.write_text(updated, encoding="utf-8")
+    except OSError as e:
+        print(f"[voice-input] интеграция Hyprland не удалена: {e}")
+        return False
+    reload()
     return True
 
 

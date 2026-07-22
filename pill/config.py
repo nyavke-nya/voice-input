@@ -8,7 +8,7 @@ from pathlib import Path
 from .hotkey import canonical_combo
 
 DEFAULTS: dict = {
-    "hotkey": "grave",                # бинд активации (Hyprland), меняется в настройках
+    "hotkey": "grave",                # глобальный bind, меняется в настройках
     "language": "auto",               # "ru" | "en" | "auto"
     "model": "small",                 # "tiny" | "small" | "medium" | "large"
     "input_device": None,             # None = устройство по умолчанию, иначе индекс sounddevice

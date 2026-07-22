@@ -4,8 +4,8 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Effects
 
-// «Пилюля» — стеклянный оверлей снизу по центру. Позицию/размер даёт правило
-// Hyprland. Тема: тёмное дымчатое стекло, янтарный акцент, глянец, глубина.
+// «Пилюля» — стеклянный оверлей снизу по центру. Где возможно, позицию/размер
+// задаёт compositor. Тема: тёмное дымчатое стекло, янтарный акцент, глубина.
 // Раскрытие настроек — ЕДИНАЯ поверхность: пилюля физически вырастает вверх в
 // карточку и ужимается обратно (без отдельной панели).
 Window {
@@ -16,13 +16,17 @@ Window {
     Timer { id: hideTimer; interval: 300 }  // дать поверхности ужаться в пилюлю до unmap
 
     width: 400
-    height: 960   // высокое прозрачное окно: место для карточки без скролла + смещение пилюли
+    readonly property real usableWidth: Screen.desktopAvailableWidth > 0 ? Screen.desktopAvailableWidth : Screen.width
+    readonly property real usableHeight: Screen.desktopAvailableHeight > 0 ? Screen.desktopAvailableHeight : Screen.height
+    height: Math.min(960, usableHeight > 0 ? usableHeight : 960)
+    x: Screen.virtualX + (usableWidth - width) / 2
+    y: atTop ? Screen.virtualY : Screen.virtualY + usableHeight - height
     color: "transparent"
     // Обычно фокус остаётся в исходном поле. Только кнопка «Записать»
     // временно разрешает фокус, чтобы не читать /dev/input на Wayland.
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
            | (backend.capturing ? 0 : Qt.WindowDoesNotAcceptFocus)
-    title: "Hyprland Voice Input"
+    title: "Voice Input"
 
     // ---- вшитые шрифты (кастом, портируемо) ----
     FontLoader { id: sansFont; source: "fonts/AdwaitaSans-Regular.ttf" }
@@ -265,7 +269,7 @@ Window {
                                         MouseArea { id: recMa; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: backend.captureHotkey() }
                                     }
                                 }
-                                Text { width: parent.width; wrapMode: Text.WordWrap; text: "триггер — нативный bind Hyprland, обновляется автоматически"; color: Qt.rgba(win.sub.r,win.sub.g,win.sub.b,0.75); font.family: win.ui; font.pixelSize: 11 }
+                                Text { width: parent.width; wrapMode: Text.WordWrap; text: "глобальная клавиша обновляется автоматически"; color: Qt.rgba(win.sub.r,win.sub.g,win.sub.b,0.75); font.family: win.ui; font.pixelSize: 11 }
                             }
 
                             // Язык (idx 1)

@@ -17,12 +17,13 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import Optional
 
 from PySide6.QtCore import Property, QKeyCombination, QObject, QTimer, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QGuiApplication, QKeySequence, QRegion
 from PySide6.QtQml import QQmlApplicationEngine
 
-from . import config, hypr, stats
+from . import config, desktop_integration, stats
 from .audio_recorder import AudioRecorder
 from .hotkey import canonical_combo, capture_once
 from .stt_engine import SttEngine
@@ -31,7 +32,7 @@ from .text_injector import TextInjector
 VERSION = "0.1.0"
 
 
-def _qt_hotkey_combo(key: int, modifiers: int) -> str | None:
+def _qt_hotkey_combo(key: int, modifiers: int) -> Optional[str]:
     """Превратить Qt KeyEvent в каноничный bind; один модификатор ещё не bind."""
     modifier_keys = {
         int(Qt.Key.Key_Control), int(Qt.Key.Key_Alt), int(Qt.Key.Key_AltGr),
@@ -65,6 +66,7 @@ class Backend(QObject):
     notify = Signal(str)               # текст всплывашки для QML/notify-send
     _toggleRequested = Signal()        # маршалинг toggle в GUI-поток
     _settingsRequested = Signal()      # маршалинг «открыть настройки» в GUI-поток
+    _quitRequested = Signal()          # IPC-thread -> GUI event loop
     _hotkeyCaptured = Signal(int, str)  # serial отсекает запоздалый timeout
     _hotkeyCaptureFailed = Signal(int, str)
 
@@ -90,6 +92,7 @@ class Backend(QObject):
         self._device_names, self._device_indices = self._list_devices()
         self._toggleRequested.connect(self._do_toggle)
         self._settingsRequested.connect(self._do_settings)
+        self._quitRequested.connect(QGuiApplication.quit)
         self._hotkeyCaptured.connect(self._on_captured)
         self._hotkeyCaptureFailed.connect(self._on_capture_failed)
 
@@ -99,6 +102,9 @@ class Backend(QObject):
 
     def request_settings(self) -> None:
         self._settingsRequested.emit()
+
+    def request_quit(self) -> None:
+        self._quitRequested.emit()
 
     @Slot()
     def _do_settings(self) -> None:
@@ -153,10 +159,10 @@ class Backend(QObject):
         self._set_state("idle")
 
     def _show_error(self, msg: str) -> None:
-        print(f"[pill] ошибка: {msg}")
+        print(f"[voice-input] ошибка: {msg}")
         self.notify.emit(msg)
         try:
-            subprocess.run(["notify-send", "Hyprland Voice Input", msg], check=False)
+            subprocess.run(["notify-send", "Voice Input", msg], check=False)
         except OSError:
             pass
 
@@ -250,7 +256,7 @@ class Backend(QObject):
             self.notify.emit("Скопировано в буфер")
             try:
                 subprocess.run(
-                    ["notify-send", "Hyprland Voice Input", "Скопировано в буфер"],
+                    ["notify-send", "Voice Input", "Скопировано в буфер"],
                     check=False,
                 )
             except OSError:
@@ -334,8 +340,8 @@ class Backend(QObject):
         self._cfg["pill_position"] = v
         self._save()
         self.settingsChanged.emit()
-        if hypr.install(self._cfg["hotkey"], v):
-            self.on_restart()  # move применяется при следующем маппинге окна
+        if desktop_integration.install(self._cfg["hotkey"], v):
+            self.on_restart()  # часть WM применяет move при следующем маппинге
 
     pillPosition = Property(str, _get_pill_position, _set_pill_position, notify=settingsChanged)
 
@@ -351,7 +357,7 @@ class Backend(QObject):
         if v != self._cfg["hotkey"]:
             self._cfg["hotkey"] = v
             self._save()
-            hypr.install(v, self._cfg["pill_position"])  # обновит нативный bind, если Hyprland+Lua
+            desktop_integration.install(v, self._cfg["pill_position"])
             self.on_hotkey_changed(v)  # обновит evdev/pynput-слушатель, если активен
             self.settingsChanged.emit()
 
@@ -452,7 +458,7 @@ def build_app(cfg: dict):
     """Создать QGuiApplication + движок QML. Возвращает (app, backend, engine)."""
     app = QGuiApplication(sys.argv)
     app.setApplicationName("pill")
-    app.setApplicationDisplayName("Hyprland Voice Input")
+    app.setApplicationDisplayName("Voice Input")
     app.setDesktopFileName("pill")  # -> app_id/class для оконных правил Hyprland
     app.setQuitOnLastWindowClosed(False)  # демон живёт, когда пилюля скрыта
     backend = Backend(cfg)

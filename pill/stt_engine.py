@@ -157,7 +157,7 @@ class SttEngine:
                         self._model_name = name
                         self._device = device
                         self._requested_device = requested
-                        print(f"[pill] STT: {name} на {device}/{compute}")
+                        print(f"[voice-input] STT: {name} на {device}/{compute}")
                         break
                     except Exception as e:  # noqa: BLE001  (нет CUDA-библиотек -> CPU)
                         errors.append(f"{device}: {e}")

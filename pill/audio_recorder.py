@@ -212,7 +212,7 @@ class AudioRecorder:
 
         def cb(indata, _frames, _time, status):  # PortAudio-поток
             if status:
-                print(f"[pill] предупреждение аудиопотока: {status}")
+                print(f"[voice-input] предупреждение аудиопотока: {status}")
             frames_q.put(indata[:, 0].copy())
 
         collected: list = []
@@ -229,7 +229,7 @@ class AudioRecorder:
             except Exception:  # выбранное устройство не держит 16кГц/недоступно
                 if dev is None:
                     raise
-                print("[pill] микрофон не подходит, беру устройство по умолчанию")
+                print("[voice-input] микрофон не подходит, беру устройство по умолчанию")
                 stream = _open(None)
             with stream:
                 n = 0

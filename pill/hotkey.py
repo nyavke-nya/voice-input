@@ -1,9 +1,9 @@
 """Глобальный хоткей — кроссплатформенно.
 
 Linux: evdev (читает /dev/input напрямую, работает на ЛЮБОМ композиторе —
-GNOME/KDE/Sway/Hyprland — нужна группа `input`). На Hyprland вместо этого обычно
-используется нативный bind (pill/hypr.py), тогда evdev-слушатель не запускается,
-чтобы не было двойного срабатывания.
+GNOME/KDE/Sway/Hyprland — нужна созданная установщиком группа `voiceinput`).
+Если desktop поддерживает безопасный native bind, evdev не запускается, чтобы
+не было двойного срабатывания.
 
 Windows: pynput (глобальный перехват из коробки).
 
@@ -146,7 +146,7 @@ class HotkeyListener:
         try:
             from evdev import InputDevice, categorize, ecodes, list_devices
         except Exception as e:  # noqa: BLE001
-            print(f"[pill] хоткей отключён (нет evdev): {e}")
+            print(f"[voice-input] хоткей отключён (нет evdev): {e}")
             return
         kbds = []
         for path in list_devices():
@@ -157,13 +157,13 @@ class HotkeyListener:
             if ecodes.KEY_A in dev.capabilities().get(ecodes.EV_KEY, []):
                 kbds.append(dev)
         if not kbds:
-            print("[pill] клавиатуры через evdev не найдены (нужна группа input)")
+            print("[voice-input] клавиатуры через evdev не найдены (нужна группа voiceinput)")
             return
 
         name2code = {n: getattr(ecodes, n, None) for grp in self._mods for n in grp}
         trigger_code = getattr(ecodes, self._trigger, None)
         if trigger_code is None or any(code is None for code in name2code.values()):
-            print(f"[pill] хоткей отключён: evdev не знает клавишу {self._trigger}")
+            print(f"[voice-input] хоткей отключён: evdev не знает клавишу {self._trigger}")
             for dev in kbds:
                 dev.close()
             return
@@ -232,7 +232,7 @@ def capture_once(
             if ecodes.KEY_A in d.capabilities().get(ecodes.EV_KEY, []):
                 kbds.append(d)
         if not kbds:
-            on_error("Клавиатуры через evdev не найдены; проверьте группу input")
+            on_error("Клавиатуры через evdev не найдены; проверьте группу voiceinput")
             return
         sel = selectors.DefaultSelector()
         for d in kbds:

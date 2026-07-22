@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+X-VoiceInput-Managed=true
+Name=Voice Input
+Comment=Start the offline voice-input daemon
+Comment[ru]=Запустить фоновый демон голосового ввода
+Exec=env PYTHONPATH=@PILL_ROOT@ @PILL_ROOT@/.venv/bin/python -m pill
+Path=@PILL_ROOT@
+Icon=audio-input-microphone
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+StartupNotify=false

@@ -4,12 +4,13 @@
 (Unix на Linux, TCP 127.0.0.1 на Windows):
 
     python -m pill            # запустить демон (или ничего, если уже запущен)
-    python -m pill --toggle   # старт/стоп записи (bind Hyprland / ярлык)
+    python -m pill --toggle   # старт/стоп записи (глобальный bind / ярлык)
     python -m pill --settings # открыть настройки
     python -m pill --diag     # диагностика
+    python -m pill --quit     # завершить демон
 
-Триггер записи: нативный bind Hyprland (если есть Lua-конфиг caelestia), иначе
-универсальный глобальный хоткей — evdev на Linux, pynput на Windows.
+Триггер записи: нативный bind поддерживаемого desktop/WM, иначе универсальный
+глобальный хоткей — evdev на Linux, pynput на Windows.
 """
 from __future__ import annotations
 
@@ -23,6 +24,16 @@ from . import config
 
 _WIN = sys.platform.startswith("win")
 _TCP_PORT = 47187  # localhost, для Windows-IPC
+_USAGE = """Voice Input
+
+Usage: voice-input [OPTION]
+
+  --toggle     start or stop dictation / начать или остановить диктовку
+  --settings   open settings / открыть настройки
+  --diag       print diagnostics / показать диагностику
+  --quit       stop the daemon / остановить демон
+  -h, --help   show this help / показать справку
+"""
 
 
 def _sock_path():
@@ -99,24 +110,41 @@ def _serve(backend, srv) -> None:
             backend.request_toggle()
         elif command == b"settings":
             backend.request_settings()
+        elif command == b"quit":
+            backend.request_quit()
+            break
         # b"ping" — просто подтверждение, что демон жив
 
 
 def main() -> int:
     args = sys.argv[1:]
 
-    if "--diag" in args:
+    if args in (["-h"], ["--help"]):
+        print(_USAGE, end="")
+        return 0
+    known = {"--toggle", "--settings", "--diag", "--quit"}
+    if len(args) > 1 or (args and args[0] not in known):
+        bad = " ".join(args) or "<empty>"
+        print(f"Unknown option / Неизвестный параметр: {bad}\n", file=sys.stderr)
+        print(_USAGE, end="", file=sys.stderr)
+        return 2
+
+    if args == ["--diag"]:
+        from .desktop_integration import detect
         from .text_injector import TextInjector
 
         print("config:", config.config_path())
-        print("платформа:", sys.platform)
-        print("инъекция:", TextInjector.diagnostics())
-        print("бинд:", config.load()["hotkey"])
+        print("platform:", sys.platform)
+        print("desktop:", detect().label)
+        print("injection:", TextInjector.diagnostics())
+        print("hotkey:", config.load()["hotkey"])
         return 0
 
-    want = "toggle" if "--toggle" in args else ("settings" if "--settings" in args else "start")
-    command = {"toggle": b"toggle", "settings": b"settings", "start": b"ping"}[want]
+    want = args[0][2:] if args else "start"
+    command = {"toggle": b"toggle", "settings": b"settings", "quit": b"quit", "start": b"ping"}[want]
     if _send(command):
+        return 0
+    if want == "quit":
         return 0
 
     lock = _instance_lock()
@@ -126,14 +154,14 @@ def main() -> int:
             time.sleep(0.05)
             if _send(command):
                 return 0
-        print("[pill] демон уже запускается, но сокет пока недоступен", file=sys.stderr)
+        print("[voice-input] демон уже запускается, но сокет пока недоступен", file=sys.stderr)
         return 1
     try:
         srv = _prepare_server()
     except OSError as e:
         if _send(command):
             return 0
-        print(f"[pill] не удалось открыть IPC: {e}", file=sys.stderr)
+        print(f"[voice-input] не удалось открыть IPC: {e}", file=sys.stderr)
         if lock:
             lock.close()
         return 1
@@ -141,18 +169,19 @@ def main() -> int:
     cfg = config.load()
     from PySide6.QtCore import QTimer
 
-    from . import hypr
+    from . import desktop_integration
     from .hotkey import make_listener
     from .ui import build_app
 
     app, backend, engine = build_app(cfg)
-    backend.notify.connect(lambda m: print(f"[pill] {m}"))
+    backend.notify.connect(lambda m: print(f"[voice-input] {m}"))
 
-    hypr_ok = hypr.install(cfg["hotkey"], cfg.get("pill_position", "bottom"))  # bind+rule (Hyprland+Lua)
+    native_hotkey = desktop_integration.install(
+        cfg["hotkey"], cfg.get("pill_position", "bottom")
+    )
 
     def _restart() -> None:
-        # положение окна задаётся правилом Hyprland при маппинге, поэтому смена
-        # «сверху/снизу» требует перезапуска демона (re-exec, тот же env/PYTHONPATH).
+        # Некоторые WM применяют позицию только при новом маппинге окна.
         if not _WIN:
             try:
                 _sock_path().unlink()
@@ -163,14 +192,14 @@ def main() -> int:
     backend.on_restart = _restart
 
     listener = None
-    if not hypr_ok:  # нет нативного бинда -> универсальный слушатель
+    if not native_hotkey:  # нет нативного бинда -> универсальный слушатель
         listener = make_listener(cfg["hotkey"], backend.request_toggle)
         backend.on_hotkey_changed = listener.set_combo
         try:
             listener.start()
-            print("[pill] хоткей через", "pynput" if _WIN else "evdev")
+            print("[voice-input] хоткей через", "pynput" if _WIN else "evdev")
         except Exception as e:  # noqa: BLE001
-            print(f"[pill] не удалось запустить хоткей: {e} (используйте --toggle)")
+            print(f"[voice-input] не удалось запустить хоткей: {e} (используйте --toggle)")
 
     threading.Thread(target=_serve, args=(backend, srv), daemon=True).start()
     backend.prewarm()
@@ -180,7 +209,7 @@ def main() -> int:
     elif want == "toggle":
         QTimer.singleShot(400, backend.request_toggle)
 
-    print(f"[pill] демон запущен. бинд: {cfg['hotkey']} | триггер: python -m pill --toggle")
+    print(f"[voice-input] демон запущен. бинд: {cfg['hotkey']} | команда: voice-input --toggle")
     try:
         return app.exec()
     finally:

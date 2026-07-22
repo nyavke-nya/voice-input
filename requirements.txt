@@ -1,21 +1,6 @@
-# Python-зависимости. Ставить в venv. Проверено на Python 3.14 (Linux);
-# на Windows бери Python 3.10–3.12 (там больше готовых колёс).
-
-sounddevice>=0.4.6          # захват микрофона (все ОС)
+sounddevice>=0.4.6
 numpy>=1.24
-faster-whisper>=1.0.0       # STT (CTranslate2, все ОС)
-onnxruntime>=1.16           # Silero VAD (тянется и faster-whisper'ом)
-PySide6>=6.6                # QML-интерфейс + QtQuick.Effects
-
-evdev>=1.6; sys_platform == "linux"     # фолбэк хоткея вне Hyprland (нужна группа input)
-pynput>=1.7; sys_platform == "win32"    # глобальный хоткей + набор текста на Windows
-
-# --- GPU-ускорение (опционально, NVIDIA; огромный прирост для medium) ---
-#   pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
-# Приложение само подхватит (device="auto" -> cuda), иначе тихо откатится на CPU.
-
-# --- Системные пакеты (НЕ через pip), по платформе ---
-# Wayland (Hyprland/Sway):   wtype  wl-clipboard   (+ ydotool как фолбэк)
-# Wayland (GNOME/KDE):       ydotool + запущенный ydotoold  ИЛИ метод «буфер» (wl-clipboard)
-# X11 (любой DE):            xdotool  xclip   (или xsel)
-# Аудио везде:               portaudio (для sounddevice)
+faster-whisper>=1.0.0
+onnxruntime>=1.16
+PySide6>=6.6
+evdev>=1.6; sys_platform == "linux"
