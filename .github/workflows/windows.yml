@@ -49,6 +49,9 @@ jobs:
               throw "$($script.Name): PowerShell syntax error"
             }
           }
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+            packaging\windows\build.ps1 -Gpu true -ValidateOnly
+          if ($LASTEXITCODE -ne 0) { throw "Windows PowerShell parameter binding failed" }
 
       - name: Platform-independent tests + lint
         shell: bash   # bash на GitHub = set -eo pipefail: любой упавший тест валит job
@@ -86,7 +89,8 @@ jobs:
           # workflow_dispatch (там default=gpu). whitelist на два значения.
           $variant = if ($env:VARIANT -eq "gpu") { "gpu" } else { "cpu" }
           Write-Host "variant=$variant"
-          & packaging\windows\build.ps1 -Gpu:($variant -eq "gpu")
+          $gpuArg = if ($variant -eq "gpu") { "true" } else { "false" }
+          & packaging\windows\build.ps1 -Gpu $gpuArg
 
       - name: Upload installer
         uses: actions/upload-artifact@v4

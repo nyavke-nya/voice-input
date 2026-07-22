@@ -11,8 +11,18 @@
   Требуется: Python 3.12 x64 в PATH и Inno Setup 6.3+ (ISCC.exe в PATH).
   Подпись — опционально: задай $env:PILL_PFX (путь к .pfx) и $env:PILL_PFX_PASSWORD.
 #>
-param([bool]$Gpu = $true, [switch]$SkipInstaller)
+param(
+    [ValidateSet("true", "false", "1", "0")]
+    [string]$Gpu = "true",
+    [switch]$SkipInstaller,
+    [switch]$ValidateOnly
+)
 $ErrorActionPreference = "Stop"
+$gpuEnabled = $Gpu -in @("true", "1")
+if ($ValidateOnly) {
+    Write-Host "Parameters OK (GPU=$gpuEnabled)"
+    return
+}
 # PowerShell 7.4+: ненулевой код нативной команды (pip/PyInstaller/ISCC) — это ошибка.
 if ($PSVersionTable.PSVersion.Major -ge 7) { $PSNativeCommandUseErrorActionPreference = $true }
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -25,8 +35,8 @@ if (Test-Path $venv) { Remove-Item -Recurse -Force $venv }
 python -m venv $venv
 $py = Join-Path $venv "Scripts\python.exe"
 & $py -m pip install --upgrade pip
-$req = if ($Gpu) { "requirements-windows-gpu.txt" } else { "requirements-windows.txt" }
-Write-Host "Зависимости: $req  (GPU=$Gpu)"
+$req = if ($gpuEnabled) { "requirements-windows-gpu.txt" } else { "requirements-windows.txt" }
+Write-Host "Зависимости: $req  (GPU=$gpuEnabled)"
 & $py -m pip install -r (Join-Path $here $req)
 
 # 2/3. сборка onedir

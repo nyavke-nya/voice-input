@@ -20,17 +20,22 @@ function Info($m) { Write-Host "[bootstrap] $m" -ForegroundColor Cyan }
 function Have($c) { [bool](Get-Command $c -ErrorAction SilentlyContinue) }
 
 function Find-Python312 {
-    if (Have py) {
-        try {
-            $exe = & py -3.12 -c "import sys;print(sys.executable)" 2>$null
-            if ($LASTEXITCODE -eq 0 -and $exe) { return $exe.Trim() }
-        } catch {}
-    }
     foreach ($p in @(
         "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
         "$env:ProgramFiles\Python312\python.exe",
         "${env:ProgramFiles(x86)}\Python312\python.exe")) {
         if (Test-Path $p) { return $p }
+    }
+    if (Have py) {
+        try {
+            # Windows PowerShell 5.1 декодирует native stdout через OEM codepage.
+            # Передаём Unicode-путь как ASCII base64, чтобы имена вроде «Котя» не ломались.
+            $encoded = & py -3.12 -c "import base64,sys;print(base64.b64encode(sys.executable.encode('utf-8')).decode('ascii'))" 2>$null
+            if ($LASTEXITCODE -eq 0 -and $encoded) {
+                $exe = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($encoded.Trim()))
+                if (Test-Path $exe) { return $exe }
+            }
+        } catch {}
     }
     return $null
 }
@@ -97,4 +102,6 @@ if (-not $iscc) {
     $skip = @("-SkipInstaller")
 }
 Info "сборка (GPU=$Gpu)…"
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $build -Gpu:$Gpu @skip
+$gpuArg = if ($Gpu) { "true" } else { "false" }
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $build -Gpu $gpuArg @skip
+if ($LASTEXITCODE -ne 0) { throw "Сборка завершилась с кодом $LASTEXITCODE." }
