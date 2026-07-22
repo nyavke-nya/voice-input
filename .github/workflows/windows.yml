@@ -92,4 +92,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/VoiceInputSetup.exe \
             --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
-            --notes "VoiceInputSetup.exe SHA-256: \`$sha\`"
+            --notes "VoiceInputSetup.exe SHA-256: \`$sha\`" \
+          || gh release upload "$GITHUB_REF_NAME" dist/VoiceInputSetup.exe \
+            --repo "$GITHUB_REPOSITORY" --clobber

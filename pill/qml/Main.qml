@@ -268,6 +268,37 @@ Window {
                             visible: surface.tab === 0
                             width: parent.width; spacing: 18
 
+                            // Баннер обновления — виден только при backend.updateAvailable;
+                            // Column-позиционер пропускает невидимый элемент, пустого места нет.
+                            Rectangle {
+                                visible: backend.updateAvailable
+                                width: parent.width; height: 46; radius: 12
+                                color: updMa.containsMouse ? win.fillHi : win.accentDim
+                                border.color: Qt.rgba(win.accent.r, win.accent.g, win.accent.b, 0.5); border.width: 1
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Icon {
+                                    id: updIcon
+                                    anchors.left: parent.left; anchors.leftMargin: 13; anchors.verticalCenter: parent.verticalCenter
+                                    name: "download"; width: 17; height: 17; color: win.accent; stroke: 1.6
+                                }
+                                Rectangle {
+                                    id: updBtn
+                                    anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
+                                    width: 78; height: 30; radius: 9; color: win.accent
+                                    scale: updMa.pressed ? 0.97 : 1
+                                    Behavior on scale { NumberAnimation { duration: 120 } }
+                                    Text { anchors.centerIn: parent; text: "Скачать"; color: "#1a1206"; font.family: win.ui; font.pixelSize: 12; font.weight: Font.DemiBold }
+                                }
+                                Column {
+                                    anchors.left: updIcon.right; anchors.leftMargin: 11
+                                    anchors.right: updBtn.left; anchors.rightMargin: 10
+                                    anchors.verticalCenter: parent.verticalCenter; spacing: 1
+                                    Text { width: parent.width; elide: Text.ElideRight; text: "Доступно обновление"; color: win.ink; font.family: win.ui; font.pixelSize: 13; font.weight: Font.DemiBold }
+                                    Text { width: parent.width; elide: Text.ElideRight; text: "версия " + backend.latestVersion; color: win.sub; font.family: win.ui; font.pixelSize: 11 }
+                                }
+                                MouseArea { id: updMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Qt.openUrlExternally(backend.releasesUrl) }
+                            }
+
                             // Горячая клавиша (idx 0)
                             Column {
                                 width: parent.width; spacing: 8
@@ -608,6 +639,14 @@ Window {
                     Icon {
                         anchors.centerIn: parent; name: "gear"; width: 18; height: 18; stroke: 1.5
                         color: gearMa.containsMouse ? win.ink : win.sub
+                    }
+                    Rectangle {  // бейдж «доступно обновление»
+                        visible: backend.updateAvailable
+                        anchors.right: parent.right; anchors.top: parent.top
+                        anchors.rightMargin: 5; anchors.topMargin: 5
+                        width: 8; height: 8; radius: 4
+                        color: win.accent
+                        border.color: win.glass; border.width: 1.5
                     }
                     MouseArea { id: gearMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: backend.expanded = true }
                 }

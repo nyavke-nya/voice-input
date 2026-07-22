@@ -101,6 +101,15 @@ Canvas {
             ctx.beginPath()
             ctx.moveTo(cx, m * 0.7); ctx.lineTo(cx, cy - h * 0.04)
             ctx.stroke()
+
+        } else if (name === "download") {  // стрелка вниз в лоток
+            ctx.beginPath()
+            ctx.moveTo(cx, m * 0.7); ctx.lineTo(cx, h * 0.58)
+            ctx.moveTo(cx - w * 0.17, h * 0.40); ctx.lineTo(cx, h * 0.60); ctx.lineTo(cx + w * 0.17, h * 0.40)
+            ctx.stroke()
+            ctx.beginPath()  // лоток снизу
+            ctx.moveTo(m, h - m * 0.9); ctx.lineTo(w - m, h - m * 0.9)
+            ctx.stroke()
         }
     }
 }

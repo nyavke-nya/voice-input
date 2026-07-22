@@ -12,10 +12,13 @@ AudioRecorder, SttEngine, TextInjector и дёргает их по состоя�
 """
 from __future__ import annotations
 
+import json
+import re
 import subprocess
 import sys
 import threading
 import time
+import urllib.request
 from typing import Optional
 
 from PySide6.QtCore import Property, QKeyCombination, QObject, QTimer, Qt, QUrl, Signal, Slot
@@ -30,6 +33,14 @@ from .text_injector import TextInjector
 
 VERSION = "0.1.2"
 _WIN = sys.platform.startswith("win")
+
+RELEASES_API = "https://api.github.com/repos/nyavke-nya/voice-input/releases/latest"
+RELEASES_PAGE = "https://github.com/nyavke-nya/voice-input/releases/latest"
+
+
+def _parse_version(tag: str) -> tuple:
+    """'v1.0.0' -> (1, 0, 0); нечисловое отбрасывается, чтобы сравнение не падало."""
+    return tuple(int(n) for n in re.findall(r"\d+", tag)) or (0,)
 
 
 def _qt_hotkey_combo(key: int, modifiers: int) -> Optional[str]:
@@ -64,6 +75,7 @@ class Backend(QObject):
     capturingChanged = Signal()
     statsChanged = Signal()
     notify = Signal(str)               # текст всплывашки для QML/notify-send
+    updateAvailableChanged = Signal()  # найден более новый GitHub-релиз
     _toggleRequested = Signal()        # маршалинг toggle в GUI-поток
     _settingsRequested = Signal()      # маршалинг «открыть настройки» в GUI-поток
     _quitRequested = Signal()          # IPC-thread -> GUI event loop
@@ -79,6 +91,8 @@ class Backend(QObject):
         self._capturing = False
         self._capture_serial = 0
         self._stats = stats.load()
+        self._update_available = False
+        self._latest_version = ""
         self._tray = None  # QSystemTrayIcon на Windows; ставит build_app
         self.on_hotkey_changed = lambda combo: None  # ставит __main__ (evdev/pynput)
 
@@ -189,6 +203,23 @@ class Backend(QObject):
                 self._show_error(str(e))
 
         threading.Thread(target=vad, daemon=True).start()
+        threading.Thread(target=self._check_updates, daemon=True).start()
+
+    def _check_updates(self) -> None:
+        """Раз при старте: сравнить VERSION с последним GitHub-релизом. Тихо при офлайне."""
+        try:
+            req = urllib.request.Request(
+                RELEASES_API,
+                headers={"Accept": "application/vnd.github+json", "User-Agent": "voice-input"},
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                tag = json.load(resp).get("tag_name", "")
+        except Exception:  # noqa: BLE001 — офлайн/лимит/нет релизов: просто без апдейта
+            return
+        if tag and _parse_version(tag) > _parse_version(VERSION):
+            self._latest_version = tag.lstrip("vV")
+            self._update_available = True
+            self.updateAvailableChanged.emit()
 
     def _list_devices(self):
         names, idx = ["По умолчанию"], [None]
@@ -228,6 +259,18 @@ class Backend(QObject):
     @Property(str, constant=True)
     def version(self):
         return VERSION
+
+    @Property(bool, notify=updateAvailableChanged)
+    def updateAvailable(self):
+        return self._update_available
+
+    @Property(str, notify=updateAvailableChanged)
+    def latestVersion(self):
+        return self._latest_version
+
+    @Property(str, constant=True)
+    def releasesUrl(self):
+        return RELEASES_PAGE
 
     @Property(bool, constant=True)
     def isWayland(self):
@@ -517,3 +560,11 @@ def build_app(cfg: dict):
     app.aboutToQuit.connect(teardown_qml)
     backend._teardown_qml = teardown_qml
     return app, backend, engine
+
+
+if __name__ == "__main__":  # self-check: сравнение версий для баннера обновления
+    assert _parse_version("v1.0.0") > _parse_version("0.1.2")
+    assert _parse_version("v0.1.2") == _parse_version("0.1.2")
+    assert not (_parse_version("0.1.2") > _parse_version("0.1.2"))
+    assert _parse_version("v1.0.0") > _parse_version("v0.9.9")
+    print("ui self-check ok")
