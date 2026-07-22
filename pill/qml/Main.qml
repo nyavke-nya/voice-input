@@ -52,7 +52,6 @@ Window {
 
     readonly property bool recording: backend.appState === "recording"
     readonly property bool processing: backend.appState === "processing"
-    readonly property bool typing: backend.appState === "typing"
     readonly property bool atTop: backend.pillPosition === "top"   // пилюля сверху/снизу экрана
     // Python передаёт этот rect в QWindow.setMask: прозрачная часть окна не
     // перехватывает клики по приложениям под высокой 960px-поверхностью.
@@ -120,7 +119,7 @@ Window {
             anchors.topMargin: 18
             anchors.bottomMargin: 18
 
-            readonly property real collapsedW: win.recording ? 312 : ((win.processing || win.typing) ? 232 : 200)
+            readonly property real collapsedW: win.recording ? 312 : (win.processing ? 232 : 200)
             // На высоком экране карточка равна контенту. На низком оставляет
             // безопасные поля, а прокручивается только область под вкладками.
             readonly property real expandedH: 138 + panes.height
@@ -132,11 +131,8 @@ Window {
             color: win.glass
             border.width: win.cardOpen ? 1 : 1.5
             border.color: win.cardOpen ? win.rim
-                          : ((win.recording || win.processing || win.typing)
-                             ? Qt.rgba(win.accent.r,win.accent.g,win.accent.b,0.85)
-                             : win.rim)
-            opacity: (win.recording || win.processing || win.typing
-                      || backend.expanded || win.cardOpen) ? 1 : 0
+                          : ((win.recording || win.processing) ? Qt.rgba(win.accent.r,win.accent.g,win.accent.b,0.85) : win.rim)
+            opacity: (win.recording || win.processing || backend.expanded || win.cardOpen) ? 1 : 0
 
             Behavior on width { NumberAnimation { duration: win.cardOpen ? 260 : 200; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
             Behavior on height { NumberAnimation { duration: win.cardOpen ? 260 : 200; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
@@ -145,7 +141,7 @@ Window {
             Behavior on opacity { NumberAnimation { duration: 260 } }
 
             // глубина / свечение — один эффект, параметры от состояния
-            layer.enabled: win.cardOpen || win.recording || win.processing || win.typing
+            layer.enabled: win.cardOpen || win.recording || win.processing
             layer.effect: MultiEffect {
                 shadowEnabled: true
                 shadowColor: win.cardOpen ? "#000000" : win.accent
@@ -564,7 +560,6 @@ Window {
             // ============ СОДЕРЖИМОЕ ПИЛЮЛИ (низ, гаснет при раскрытии) ============
             Item {
                 id: pillContent
-                objectName: "statusCardContent"
                 anchors.left: parent.left; anchors.right: parent.right
                 anchors.top: win.atTop ? parent.top : undefined
                 anchors.bottom: win.atTop ? undefined : parent.bottom
@@ -578,8 +573,7 @@ Window {
                     id: dot
                     anchors.left: parent.left; anchors.leftMargin: 22; anchors.verticalCenter: parent.verticalCenter
                     width: 10; height: 10; radius: 5
-                    color: win.recording ? win.accent
-                                         : ((win.processing || win.typing) ? "#ffcf99" : Qt.rgba(1,1,1,0.25))
+                    color: win.recording ? win.accent : (win.processing ? "#ffcf99" : Qt.rgba(1,1,1,0.25))
                     Behavior on color { ColorAnimation { duration: 200 } }
                 }
                 SequentialAnimation {
@@ -589,7 +583,7 @@ Window {
                     onStopped: dot.scale = 1
                 }
                 SequentialAnimation {
-                    running: win.processing || win.typing; loops: Animation.Infinite
+                    running: win.processing; loops: Animation.Infinite
                     NumberAnimation { target: dot; property: "opacity"; to: 0.3; duration: 420 }
                     NumberAnimation { target: dot; property: "opacity"; to: 1.0; duration: 420 }
                     onStopped: dot.opacity = 1
@@ -602,50 +596,20 @@ Window {
                     anchors.verticalCenter: parent.verticalCenter
                     height: parent.height
                     Waveform {
-                        objectName: "statusWave"
                         anchors.centerIn: parent
                         width: Math.min(parent.width, implicitWidth)
                         active: win.recording
                         level: backend.level
                         barColor: win.accent
-                        opacity: win.recording ? 1 : 0
+                        opacity: win.processing ? 0 : 1
                         Behavior on opacity { NumberAnimation { duration: 150 } }
                     }
                     Text {
-                        id: processingText
-                        objectName: "processingText"
                         anchors.centerIn: parent
                         text: "Распознаю…"
                         color: win.ink; font.family: win.ui; font.pixelSize: 13
                         opacity: win.processing ? 1 : 0
                         Behavior on opacity { NumberAnimation { duration: 150 } }
-                    }
-                    Row {
-                        anchors.centerIn: parent
-                        opacity: win.typing ? 1 : 0
-                        spacing: 3
-                        Behavior on opacity { NumberAnimation { duration: 150 } }
-                        Text {
-                            id: typingText
-                            objectName: "statusText"
-                            text: "Ввожу…"
-                            color: win.ink; font.family: win.ui; font.pixelSize: 13
-                        }
-                        Rectangle {
-                            id: typingCaret
-                            objectName: "typingCaret"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 1.5; height: 14; radius: 1
-                            color: win.accent
-                        }
-                        SequentialAnimation {
-                            objectName: "typingCaretAnimation"
-                            running: win.typing
-                            loops: Animation.Infinite
-                            NumberAnimation { target: typingCaret; property: "opacity"; to: 0.16; duration: 420; easing.type: Easing.Linear }
-                            NumberAnimation { target: typingCaret; property: "opacity"; to: 1; duration: 420; easing.type: Easing.Linear }
-                            onStopped: typingCaret.opacity = 1
-                        }
                     }
                 }
 

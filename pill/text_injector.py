@@ -28,7 +28,6 @@ _TERMINALS = {
     "org.gnome.console", "kgx",
     "xterm", "st", "urxvt",
 }
-_TYPE_DELAY_MS = 8  # видимый, но почти не влияющий на скорость набора
 
 
 def _is_windows() -> bool:
@@ -117,7 +116,7 @@ def _type_cmd(text: str) -> List[str]:
     """Команда «набрать текст» для текущей сессии Linux."""
     if _is_wayland():
         if _have("wtype"):
-            return ["wtype", "-d", str(_TYPE_DELAY_MS), "--", text]
+            return ["wtype", "--", text]           # Unicode (кириллица)
         if _have("ydotool") and text.isascii():
             return ["ydotool", "type", text]        # uinput-фолбэк, без кириллицы
         raise RuntimeError("для Unicode на Wayland нужен clipboard fallback")
@@ -125,10 +124,7 @@ def _type_cmd(text: str) -> List[str]:
         raise RuntimeError("графическая сессия Wayland/X11 не найдена")
     # X11
     if _have("xdotool"):
-        return [
-            "xdotool", "type", "--delay", str(_TYPE_DELAY_MS),
-            "--clearmodifiers", "--", text,
-        ]
+        return ["xdotool", "type", "--clearmodifiers", "--", text]  # Unicode
     if _have("ydotool"):
         return ["ydotool", "type", text]
     raise RuntimeError("для X11 нужен xdotool (или ydotool); поставьте xdotool")
@@ -276,10 +272,7 @@ class TextInjector:
             return self._inject_windows_clipboard(text)
         from pynput.keyboard import Controller  # keyboard: Unicode-набор, фокус не нужен
 
-        keyboard = Controller()
-        for character in text:
-            keyboard.type(character)
-            time.sleep(_TYPE_DELAY_MS / 1000)
+        Controller().type(text)
         return True
 
     def _inject_windows_clipboard(self, text: str) -> bool:
