@@ -56,9 +56,10 @@ jobs:
       - name: Platform-independent tests + lint
         shell: bash   # bash на GitHub = set -eo pipefail: любой упавший тест валит job
         run: |
-          python -m pip install --upgrade pip ruff
+          python -m pip install --upgrade pip ruff PySide6
           ruff check pill tests
           python -m compileall -q pill tests
+          python -m py_compile packaging/windows/voice_input.py packaging/windows/voice_input.spec
           python tests/test_config.py
           python tests/test_hotkey_parse.py
           python tests/test_stats.py

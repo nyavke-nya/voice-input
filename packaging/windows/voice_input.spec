@@ -1,4 +1,4 @@
-# -*- mode: python ; coding: python -*-
+# -*- mode: python ; coding: utf-8 -*-
 """PyInstaller spec: onedir + windowed VoiceInput.exe.
 
 Onedir (не onefile): ML-зависимости крупные, onefile медленнее стартует и чаще
@@ -8,7 +8,7 @@ import os
 
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
-HERE = os.path.abspath(os.path.dirname(SPECPATH))          # packaging/windows
+HERE = os.path.abspath(SPECPATH)                           # packaging/windows
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))     # корень репозитория
 
 datas, binaries, hiddenimports = [], [], []
