@@ -8,6 +8,8 @@ Offline voice typing and speech-to-text for Windows 10/11. Dictate into any
 focused text field, transcribe Russian speech or translate speech into English.
 Audio stays on your computer.
 
+![Voice Input demo — speech is recognized and typed into the focused field](docs/assets/voice-input-demo.gif)
+
 ## Скачать для Windows / Download
 
 ### [⬇ Скачать VoiceInputSetup.exe](https://github.com/nyavke/voice-input/releases/latest/download/VoiceInputSetup.exe)
