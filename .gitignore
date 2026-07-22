@@ -5,6 +5,9 @@ __pycache__/
 *.tar.gz
 .remember/
 .~lock.*#
+/backups/
+/tests/
+/docs/WINDOWS_IMPLEMENTATION_FOR_CLAUDE.md
 # Windows build artifacts (PyInstaller / Inno / build venv)
 /build/
 /dist/

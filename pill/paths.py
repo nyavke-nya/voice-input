@@ -5,9 +5,8 @@
   Windows: config  %APPDATA%\\Voice Input\\config.json
            cache/logs/models %LOCALAPPDATA%\\Voice Input\\...
 
-Чистые функции принимают env/platform, поэтому Windows-ветку можно тестировать
-на любой ОС (см. tests/test_paths.py) без разбросанных по проекту проверок
-sys.frozen / os.name.
+Чистые функции принимают env/platform, поэтому Windows-ветка не зависит от
+текущей ОС и не требует разбросанных по проекту проверок sys.frozen / os.name.
 """
 from __future__ import annotations
 
