@@ -2,6 +2,10 @@
 # Remove Voice Input integration without removing shared distro packages.
 set -Eeuo pipefail
 
+# openSUSE may omit sbin from a regular user's login PATH.
+PATH="${PATH:-/usr/local/bin:/usr/bin:/bin}:/usr/local/sbin:/usr/sbin:/sbin"
+export PATH
+
 voice_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 voice_venv="${voice_root}/.venv"
 voice_user="$(id -un)"
@@ -131,8 +135,8 @@ voice_as_root true
 
 voice_stop_daemon
 if [[ -n "$voice_ydotoold_pid" ]] \
-        && [[ "$(ps -o user= -p "$voice_ydotoold_pid" 2>/dev/null | xargs)" == "$voice_user" ]] \
-        && [[ "$(ps -o comm= -p "$voice_ydotoold_pid" 2>/dev/null | xargs)" == ydotoold ]]; then
+        && [[ "$(ps -o user= -p "$voice_ydotoold_pid" 2>/dev/null | tr -d '[:space:]')" == "$voice_user" ]] \
+        && [[ "$(ps -o comm= -p "$voice_ydotoold_pid" 2>/dev/null | tr -d '[:space:]')" == ydotoold ]]; then
     kill "$voice_ydotoold_pid" 2>/dev/null || true
 fi
 

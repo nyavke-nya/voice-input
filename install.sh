@@ -63,6 +63,12 @@ fi
 
 set -Eeuo pipefail
 
+# Normal desktop users on openSUSE do not necessarily inherit sbin paths,
+# although account-management tools live there. Keep discovery independent of
+# the shell/login profile without replacing the user's existing PATH.
+PATH="${PATH:-/usr/local/bin:/usr/bin:/bin}:/usr/local/sbin:/usr/sbin:/sbin"
+export PATH
+
 voice_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 voice_venv="${voice_root}/.venv"
 voice_user="$(id -un)"
@@ -168,23 +174,23 @@ voice_optional_packages=()
 case "$voice_pm" in
     pacman)
         voice_core_packages=(python python-pip portaudio acl base-devel)
-        voice_optional_packages=(wtype ydotool dotool wl-clipboard xdotool xclip libnotify desktop-file-utils libxkbcommon-x11 xcb-util-cursor)
+        voice_optional_packages=(wtype ydotool wl-clipboard xdotool xclip libnotify desktop-file-utils libxkbcommon-x11 xcb-util-cursor)
         ;;
     apt)
         voice_core_packages=(python3 python3-venv python3-pip python3-dev build-essential linux-libc-dev libportaudio2 portaudio19-dev acl)
-        voice_optional_packages=(wtype ydotool dotool wl-clipboard xdotool xclip libnotify-bin desktop-file-utils libgl1 libegl1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 libxcb-xinerama0)
+        voice_optional_packages=(wtype ydotool wl-clipboard xdotool xclip libnotify-bin desktop-file-utils libgl1 libegl1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 libxcb-xinerama0 libxcb-icccm4 libxcb-keysyms1)
         ;;
     dnf)
         voice_core_packages=(python3 python3-pip python3-devel gcc kernel-headers portaudio portaudio-devel acl)
-        voice_optional_packages=(wtype ydotool dotool wl-clipboard xdotool xclip libnotify desktop-file-utils libxkbcommon-x11 xcb-util-cursor mesa-libGL)
+        voice_optional_packages=(wtype ydotool wl-clipboard xdotool xclip libnotify desktop-file-utils libxkbcommon-x11 xcb-util-cursor mesa-libGL)
         ;;
     zypper)
         voice_core_packages=(python311 python311-pip python311-devel gcc linux-glibc-devel portaudio-devel acl)
-        voice_optional_packages=(wtype ydotool dotool wl-clipboard xdotool xclip libnotify-tools desktop-file-utils libxkbcommon-x11-0 libxcb-cursor0 Mesa-libGL1)
+        voice_optional_packages=(wtype ydotool wl-clipboard xdotool xclip libnotify-tools desktop-file-utils libxkbcommon-x11-0 libxcb-cursor0 Mesa-libGL1)
         ;;
     xbps)
         voice_core_packages=(python3 python3-pip python3-devel base-devel portaudio-devel acl)
-        voice_optional_packages=(python3-virtualenv wtype ydotool dotool wl-clipboard xdotool xclip libnotify desktop-file-utils libxkbcommon-x11 xcb-util-cursor)
+        voice_optional_packages=(python3-virtualenv wtype dotool wl-clipboard xdotool xclip libnotify desktop-file-utils libxkbcommon-x11 xcb-util-cursor)
         ;;
     apk)
         voice_core_packages=(python3 py3-pip py3-virtualenv python3-dev build-base linux-headers portaudio portaudio-dev acl)
@@ -251,39 +257,46 @@ printf 'WARNING: packages and two narrow udev rules under /etc will now be insta
 voice_as_root true
 
 voice_apt_updated=false
-voice_install_package() {
-    local package="$1"
+voice_install_packages() {
+    (($#)) || return 0
     case "$voice_pm" in
-        pacman) voice_as_root pacman -S --needed --noconfirm "$package" ;;
+        pacman) voice_as_root pacman -S --needed --noconfirm "$@" ;;
         apt)
             if ! $voice_apt_updated; then
                 voice_as_root apt-get update
                 voice_apt_updated=true
             fi
             voice_as_root env DEBIAN_FRONTEND=noninteractive \
-                apt-get install -y --no-install-recommends "$package"
+                apt-get install -y --no-install-recommends "$@"
             ;;
-        dnf) voice_as_root dnf install -y "$package" ;;
-        zypper) voice_as_root zypper --non-interactive install --no-recommends "$package" ;;
-        xbps) voice_as_root xbps-install -Sy "$package" ;;
-        apk) voice_as_root apk add "$package" ;;
-        emerge) voice_as_root emerge --noreplace "$package" ;;
-        eopkg) voice_as_root eopkg install -y "$package" ;;
+        dnf) voice_as_root dnf install -y "$@" ;;
+        zypper) voice_as_root zypper --non-interactive install --no-recommends "$@" ;;
+        xbps) voice_as_root xbps-install -Sy "$@" ;;
+        apk) voice_as_root apk add "$@" ;;
+        emerge) voice_as_root emerge --noreplace "$@" ;;
+        eopkg) voice_as_root eopkg install -y "$@" ;;
         generic) return 1 ;;
     esac
 }
 
+voice_install_package() {
+    voice_install_packages "$1"
+}
+
 if ((${#voice_core_packages[@]})); then
     printf '\nСтавлю обязательные системные зависимости…\n'
-    for voice_package in "${voice_core_packages[@]}"; do
-        voice_install_package "$voice_package"
-    done
+    voice_install_packages "${voice_core_packages[@]}"
     printf '\nСтавлю доступные desktop-инструменты…\n'
-    for voice_package in "${voice_optional_packages[@]}"; do
-        if ! voice_install_package "$voice_package"; then
-            printf 'Предупреждение: пакет %s недоступен; будет использован fallback.\n' "$voice_package" >&2
-        fi
-    done
+    # One transaction is much faster on zypper/dnf/apt. If an older distro is
+    # missing one optional helper, retry individually and keep every fallback
+    # that is available there.
+    if ! voice_install_packages "${voice_optional_packages[@]}"; then
+        for voice_package in "${voice_optional_packages[@]}"; do
+            if ! voice_install_package "$voice_package"; then
+                printf 'Предупреждение: пакет %s недоступен; будет использован fallback.\n' "$voice_package" >&2
+            fi
+        done
+    fi
 else
     printf '\nНеизвестный пакетный менеджер: системные пакеты не меняю.\n' >&2
 fi

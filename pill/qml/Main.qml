@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Window
 import QtQuick.Effects
+import QtQuick.Controls as Controls
 
 // «Пилюля» — стеклянный оверлей снизу по центру. Где возможно, позицию/размер
 // задаёт compositor. Тема: тёмное дымчатое стекло, янтарный акцент, глубина.
@@ -15,9 +16,9 @@ Window {
     onWantVisibleChanged: if (!wantVisible) hideTimer.restart()
     Timer { id: hideTimer; interval: 300 }  // дать поверхности ужаться в пилюлю до unmap
 
-    width: 400
     readonly property real usableWidth: Screen.desktopAvailableWidth > 0 ? Screen.desktopAvailableWidth : Screen.width
     readonly property real usableHeight: Screen.desktopAvailableHeight > 0 ? Screen.desktopAvailableHeight : Screen.height
+    width: Math.min(400, usableWidth > 0 ? usableWidth : 400)
     height: Math.min(960, usableHeight > 0 ? usableHeight : 960)
     x: Screen.virtualX + (usableWidth - width) / 2
     y: atTop ? Screen.virtualY : Screen.virtualY + usableHeight - height
@@ -107,7 +108,9 @@ Window {
         // Свёрнута = пилюля (низ). Развёрнута = карточка: растёт вверх, бок в бок.
         Rectangle {
             id: surface
+            objectName: "surface"
             property int tab: 0
+            onTabChanged: paneScroll.contentY = 0
 
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: win.atTop ? parent.top : undefined
@@ -116,10 +119,12 @@ Window {
             anchors.bottomMargin: 18
 
             readonly property real collapsedW: win.recording ? 312 : (win.processing ? 232 : 200)
-            // высота развёрнутой карточки = ровно по контенту активной вкладки -> скролла нет
+            // На высоком экране карточка равна контенту. На низком оставляет
+            // безопасные поля, а прокручивается только область под вкладками.
             readonly property real expandedH: 138 + panes.height
+            readonly property real maxExpandedH: Math.max(58, parent.height - 36)
             width: win.cardOpen ? (parent.width - 24) : collapsedW
-            height: win.cardOpen ? expandedH : 58
+            height: win.cardOpen ? Math.min(expandedH, maxExpandedH) : 58
             radius: win.cardOpen ? 26 : 29
             antialiasing: true
             color: win.glass
@@ -166,6 +171,7 @@ Window {
                 // --- заголовок ---
                 Item {
                     id: header
+                    objectName: "header"
                     anchors { left: parent.left; right: parent.right; top: parent.top; margins: 20 }
                     height: 26
                     Text {
@@ -229,11 +235,34 @@ Window {
                     }
                 }
 
-                // --- панели: высота карточки подстраивается под контент, скролла нет ---
-                Column {
-                    id: panes
-                    anchors { left: parent.left; right: parent.right; top: tabs.bottom
-                              leftMargin: 20; rightMargin: 20; topMargin: 18 }
+                // --- панели: на низком экране скроллится только контент ---
+                Flickable {
+                    id: paneScroll
+                    objectName: "paneScroll"
+                    anchors { left: parent.left; right: parent.right; top: tabs.bottom; bottom: parent.bottom
+                              leftMargin: 20; rightMargin: 14; topMargin: 18; bottomMargin: 20 }
+                    clip: true
+                    contentWidth: width
+                    contentHeight: panes.height
+                    flickableDirection: Flickable.VerticalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    interactive: contentHeight > height
+
+                    Controls.ScrollBar.vertical: Controls.ScrollBar {
+                        policy: Controls.ScrollBar.AsNeeded
+                        width: 4
+                        contentItem: Rectangle {
+                            implicitWidth: 4
+                            radius: 2
+                            color: Qt.rgba(win.accent.r, win.accent.g, win.accent.b, 0.55)
+                        }
+                        background: Item {}
+                    }
+
+                    Column {
+                        id: panes
+                        objectName: "panes"
+                        width: paneScroll.width - (paneScroll.contentHeight > paneScroll.height ? 8 : 0)
 
                         // ==================== НАСТРОЙКИ ====================
                         Column {
@@ -522,6 +551,7 @@ Window {
                                 }
                             }
                         }
+                    }
                 }
             }
             // ↑ panes Column / cardContent Item

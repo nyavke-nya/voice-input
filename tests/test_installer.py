@@ -75,9 +75,21 @@ def test_run_script_forwards_cli_arguments():
     assert "Usage: voice-input [OPTION]" in result.stdout
 
 
+def test_cross_distro_regressions_are_kept_fixed():
+    installer = (ROOT / "install.sh").read_text(encoding="utf-8")
+    uninstaller = (ROOT / "uninstall.sh").read_text(encoding="utf-8")
+
+    assert "libxcb-icccm4" in installer
+    assert "libxcb-keysyms1" in installer
+    assert ':/usr/local/sbin:/usr/sbin:/sbin"' in installer
+    assert 'voice_install_packages "${voice_core_packages[@]}"' in installer
+    assert "xargs" not in uninstaller
+
+
 if __name__ == "__main__":
     test_desktop_detection_matrix()
     test_uninstall_dry_run_and_bad_argument()
     test_installed_command_resolves_repository_symlink()
     test_run_script_forwards_cli_arguments()
+    test_cross_distro_regressions_are_kept_fixed()
     print("test_installer OK")
