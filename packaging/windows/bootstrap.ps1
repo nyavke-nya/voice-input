@@ -5,7 +5,7 @@
   проект (git не нужен) и собирает VoiceInputSetup.exe.
 
   Из любого места:
-    irm https://raw.githubusercontent.com/nyavke/voice-input/main/packaging/windows/bootstrap.ps1 | iex
+    irm https://raw.githubusercontent.com/nyavke-nya/voice-input/main/packaging/windows/bootstrap.ps1 | iex
 
   Или локально из репозитория:
     powershell -ExecutionPolicy Bypass -File packaging\windows\bootstrap.ps1
@@ -89,7 +89,7 @@ if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "build.ps1"))) {
     New-Item -ItemType Directory -Path $work | Out-Null
     $zip = Join-Path $work "src.zip"
     Info "скачиваю проект…"
-    Invoke-WebRequest "https://github.com/nyavke/voice-input/archive/refs/heads/main.zip" -OutFile $zip
+    Invoke-WebRequest "https://github.com/nyavke-nya/voice-input/archive/refs/heads/main.zip" -OutFile $zip
     Expand-Archive $zip -DestinationPath $work
     $build = Join-Path $work "voice-input-main\packaging\windows\build.ps1"
 }

@@ -14,7 +14,7 @@ your computer.
 
 ### Windows
 
-[Скачать VoiceInputSetup.exe / Download for Windows](https://github.com/nyavke/voice-input/releases/latest/download/VoiceInputSetup.exe)
+[Скачать VoiceInputSetup.exe / Download for Windows](https://github.com/nyavke-nya/voice-input/releases/latest/download/VoiceInputSetup.exe)
 
 Подходят Windows 10 22H2 и Windows 11 x64. Сам Setup занимает примерно 230–300 МБ;
 Python и всё для работы на CPU уже внутри.
@@ -36,13 +36,13 @@ The installer is not signed yet. Windows may show the same warning under
 
 ### Linux
 
-[Скачать архив / Download for Linux (.tar.gz)](https://github.com/nyavke/voice-input/archive/refs/heads/main.tar.gz)
+[Скачать архив / Download for Linux (.tar.gz)](https://github.com/nyavke-nya/voice-input/archive/refs/heads/main.tar.gz)
 
 Voice Input поддерживает Arch/CachyOS, Debian/Ubuntu, Fedora, openSUSE и Void.
 Он работает в Hyprland, Sway, GNOME, KDE, Cinnamon и XFCE через Wayland или X11.
 
 ```bash
-git clone https://github.com/nyavke/voice-input.git
+git clone https://github.com/nyavke-nya/voice-input.git
 cd voice-input
 ./install.sh --dry-run
 ./install.sh
@@ -100,6 +100,6 @@ CPU. Linux-установщик также загружает CUDA-библио�
 
 ## Ошибки и связь / Bugs and contact
 
-Создайте [GitHub issue](https://github.com/nyavke/voice-input/issues/new/choose)
+Создайте [GitHub issue](https://github.com/nyavke-nya/voice-input/issues/new/choose)
 или напишите в Telegram: [@nyavke](https://t.me/nyavke). Укажите версию Voice
 Input, операционную систему, рабочий стол и приложите лог.
