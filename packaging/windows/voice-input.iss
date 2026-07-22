@@ -66,19 +66,21 @@ Source: "..\..\dist\VoiceInput\*"; DestDir: "{app}"; Flags: recursesubdirs creat
 
 [InstallDelete]
 ; Удалить CUDA от старой 1,6-ГБ сборки и предыдущий отдельно скачанный runtime.
-Type: filesandordirs; Name: "{app}\gpu-runtime"
-Type: filesandordirs; Name: "{app}\nvidia"
-Type: filesandordirs; Name: "{app}\_internal\nvidia"
-Type: files; Name: "{app}\cublas*.dll"
-Type: files; Name: "{app}\cudnn*.dll"
-Type: files; Name: "{app}\cudart*.dll"
-Type: files; Name: "{app}\nvrtc*.dll"
-Type: files; Name: "{app}\nvJitLink*.dll"
-Type: files; Name: "{app}\_internal\cublas*.dll"
-Type: files; Name: "{app}\_internal\cudnn*.dll"
-Type: files; Name: "{app}\_internal\cudart*.dll"
-Type: files; Name: "{app}\_internal\nvrtc*.dll"
-Type: files; Name: "{app}\_internal\nvJitLink*.dll"
+; Только когда задача NVIDIA выбрана: тихий auto-update идёт с /MERGETASKS=!nvidiagpu,
+; и существующий CUDA-рантайм сохраняется (не удаляется и не перекачивается заново).
+Type: filesandordirs; Name: "{app}\gpu-runtime"; Check: NvidiaSelected
+Type: filesandordirs; Name: "{app}\nvidia"; Check: NvidiaSelected
+Type: filesandordirs; Name: "{app}\_internal\nvidia"; Check: NvidiaSelected
+Type: files; Name: "{app}\cublas*.dll"; Check: NvidiaSelected
+Type: files; Name: "{app}\cudnn*.dll"; Check: NvidiaSelected
+Type: files; Name: "{app}\cudart*.dll"; Check: NvidiaSelected
+Type: files; Name: "{app}\nvrtc*.dll"; Check: NvidiaSelected
+Type: files; Name: "{app}\nvJitLink*.dll"; Check: NvidiaSelected
+Type: files; Name: "{app}\_internal\cublas*.dll"; Check: NvidiaSelected
+Type: files; Name: "{app}\_internal\cudnn*.dll"; Check: NvidiaSelected
+Type: files; Name: "{app}\_internal\cudart*.dll"; Check: NvidiaSelected
+Type: files; Name: "{app}\_internal\nvrtc*.dll"; Check: NvidiaSelected
+Type: files; Name: "{app}\_internal\nvJitLink*.dll"; Check: NvidiaSelected
 
 [Icons]
 ; Все ярлыки — только на установленный EXE (иконка вшита в него PyInstaller'ом,
@@ -92,13 +94,22 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
   ValueName: "Voice Input"; ValueData: """{app}\{#AppExe}"""; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
-Filename: "{app}\{#AppExe}"; Description: "Запустить Voice Input"; Flags: nowait postinstall skipifsilent
+; Без skipifsilent: тихий auto-update (app сам ставит installer /SILENT) должен
+; перезапустить приложение после обновления.
+Filename: "{app}\{#AppExe}"; Description: "Запустить Voice Input"; Flags: nowait postinstall
 
 [Code]
 function HasNvidiaDriver: Boolean;
 begin
   { nvcuda.dll ставится драйвером NVIDIA; без него CUDA-рантайм бесполезен. }
   Result := FileExists(ExpandConstant('{sys}\nvcuda.dll'));
+end;
+
+function NvidiaSelected: Boolean;
+begin
+  { CUDA удаляем/качаем только когда задача выбрана. Тихий auto-update идёт с
+    /MERGETASKS=!nvidiagpu -> существующий CUDA-рантайм сохраняется как есть. }
+  Result := WizardIsTaskSelected('nvidiagpu');
 end;
 
 function GetInstalledVersion: String;

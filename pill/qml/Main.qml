@@ -302,7 +302,7 @@ Window {
                                     width: 78; height: 30; radius: 9; color: win.accent
                                     scale: updMa.pressed ? 0.97 : 1
                                     Behavior on scale { NumberAnimation { duration: 120 } }
-                                    Text { anchors.centerIn: parent; text: "Скачать"; color: "#1a1206"; font.family: win.ui; font.pixelSize: 12; font.weight: Font.DemiBold }
+                                    Text { anchors.centerIn: parent; text: "Обновить"; color: "#1a1206"; font.family: win.ui; font.pixelSize: 12; font.weight: Font.DemiBold }
                                 }
                                 Column {
                                     anchors.left: updIcon.right; anchors.leftMargin: 11
@@ -311,7 +311,7 @@ Window {
                                     Text { width: parent.width; elide: Text.ElideRight; text: "Доступно обновление"; color: win.ink; font.family: win.ui; font.pixelSize: 13; font.weight: Font.DemiBold }
                                     Text { width: parent.width; elide: Text.ElideRight; text: "версия " + backend.latestVersion; color: win.sub; font.family: win.ui; font.pixelSize: 11 }
                                 }
-                                MouseArea { id: updMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Qt.openUrlExternally(backend.releasesUrl) }
+                                MouseArea { id: updMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: backend.applyUpdate() }
                             }
 
                             // Горячая клавиша (idx 0)
