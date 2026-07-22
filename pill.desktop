@@ -1,0 +1,21 @@
+[Desktop Entry]
+Type=Application
+Name=Hyprland Voice Input
+GenericName=Voice Dictation
+GenericName[ru]=Голосовой ввод
+Comment=Local Whisper voice dictation for Hyprland
+Comment[ru]=Локальный голосовой ввод для Hyprland
+Exec=env PYTHONPATH=@PILL_ROOT@ @PILL_ROOT@/.venv/bin/python -m pill --settings
+Path=@PILL_ROOT@
+Icon=audio-input-microphone
+Terminal=false
+Categories=AudioVideo;Audio;
+Keywords=voice;speech;dictation;stt;whisper;голос;диктовка;
+StartupNotify=false
+StartupWMClass=pill
+Actions=toggle;
+
+[Desktop Action toggle]
+Name=Start or stop dictation
+Name[ru]=Диктовать (старт/стоп записи)
+Exec=env PYTHONPATH=@PILL_ROOT@ @PILL_ROOT@/.venv/bin/python -m pill --toggle
