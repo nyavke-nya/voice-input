@@ -11,7 +11,7 @@
   Требуется: Python 3.12 x64 в PATH и Inno Setup 6.3+ (ISCC.exe в PATH).
   Подпись — опционально: задай $env:PILL_PFX (путь к .pfx) и $env:PILL_PFX_PASSWORD.
 #>
-param([bool]$Gpu = $true)
+param([bool]$Gpu = $true, [switch]$SkipInstaller)
 $ErrorActionPreference = "Stop"
 # PowerShell 7.4+: ненулевой код нативной команды (pip/PyInstaller/ISCC) — это ошибка.
 if ($PSVersionTable.PSVersion.Major -ge 7) { $PSNativeCommandUseErrorActionPreference = $true }
@@ -40,6 +40,11 @@ foreach ($d in @("build", "dist")) {
 $exe = Join-Path $root "dist\VoiceInput\VoiceInput.exe"
 & $exe --self-test
 if ($LASTEXITCODE -ne 0) { throw "self-test упал (код $LASTEXITCODE)" }
+
+if ($SkipInstaller) {
+    Write-Host "Готово (без installer): $exe"
+    return
+}
 
 # 5. Inno installer -> dist\VoiceInputSetup.exe
 & ISCC.exe (Join-Path $here "voice-input.iss")
