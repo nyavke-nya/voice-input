@@ -1,11 +1,12 @@
-# Voice Input
+# Voice Input for Linux
 
-Локальный голосовой ввод на Whisper для Linux. Программа печатает текст в
-активное поле, а режим `English` переводит русскую и другую поддерживаемую речь
-на английский. Аудио обрабатывается на компьютере.
+Локальный голосовой ввод для Linux на базе Whisper. Программа печатает диктовку
+в активное поле, а режим `English` переводит русскую и другую поддерживаемую
+речь на английский. Аудио обрабатывается на компьютере.
 
-Offline Whisper dictation for Linux. It types into the focused field and can
-translate supported speech into English. Audio is processed on your computer.
+Voice Input for Linux is an offline speech-to-text app built on Whisper. Use it
+for voice typing and dictation in focused fields on Wayland or X11. It can also
+translate supported speech into English.
 
 ## Установка / Install
 
