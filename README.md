@@ -34,6 +34,9 @@ hotkey at the end.
 Focus a text field, press the printed hotkey, speak and pause. Open `Voice Input`
 from the app menu for settings, or run `voice-input --settings`.
 
+Из каталога проекта приложение можно открыть командой `./run.sh`.
+From the project directory, run `./run.sh` to open the app.
+
 | Режим / Mode | Результат / Result |
 | --- | --- |
 | `Русский / Russian` | Русская транскрипция / Russian transcription |

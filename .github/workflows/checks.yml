@@ -46,8 +46,9 @@ jobs:
         run: |
           python -m compileall -q pill tests
           ruff check pill tests
-          shellcheck install.sh uninstall.sh voice-input
-          bash -n install.sh uninstall.sh voice-input
+          shellcheck install.sh uninstall.sh run.sh voice-input
+          bash -n install.sh uninstall.sh run.sh voice-input
+          sh -n run.sh voice-input
           /bin/sh ./install.sh --dry-run --skip-model >/dev/null
 
       - name: Run tests

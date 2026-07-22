@@ -66,8 +66,18 @@ def test_installed_command_resolves_repository_symlink():
         assert "config:" in result.stdout and "injection:" in result.stdout
 
 
+def test_run_script_forwards_cli_arguments():
+    result = subprocess.run(
+        [str(ROOT / "run.sh"), "--help"], cwd=ROOT,
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Usage: voice-input [OPTION]" in result.stdout
+
+
 if __name__ == "__main__":
     test_desktop_detection_matrix()
     test_uninstall_dry_run_and_bad_argument()
     test_installed_command_resolves_repository_symlink()
+    test_run_script_forwards_cli_arguments()
     print("test_installer OK")
