@@ -1,39 +1,79 @@
-# Voice Input for Windows and Linux
+# Voice Input for Windows
 
-Локальный голосовой ввод на базе Whisper. Программа распознаёт речь прямо на
-компьютере и печатает текст в активное поле. Режим `English` переводит русскую
-и другую поддерживаемую речь на английский.
+Голосовой ввод для Windows 10 и 11. Voice Input локально распознаёт речь через
+Whisper и печатает текст в любое активное поле. Режим `English` переводит
+русскую и другую поддерживаемую речь на английский.
 
-Voice Input is a local Whisper-based dictation app for Windows and Linux. It
-types recognized speech into the focused field and can translate supported
-speech into English. Audio stays on your computer.
+Offline voice typing and speech-to-text for Windows 10/11. Dictate into any
+focused text field, transcribe Russian speech or translate speech into English.
+Audio stays on your computer.
 
-## Windows
+## Скачать для Windows / Download
 
-[Скачать VoiceInputSetup.exe / Download for Windows](https://github.com/nyavke/voice-input/releases/latest/download/VoiceInputSetup.exe)
+### [⬇ Скачать VoiceInputSetup.exe](https://github.com/nyavke/voice-input/releases/latest/download/VoiceInputSetup.exe)
 
-Поддерживаются 64-битные Windows 10 22H2 и Windows 11.
+Поддерживаются Windows 10 22H2 и Windows 11, только x64. Python и другие
+зависимости уже находятся внутри установщика.
 
-1. Скачайте `VoiceInputSetup.exe` со страницы Releases.
+1. Скачайте `VoiceInputSetup.exe`.
 2. Запустите установщик.
 3. Откройте Voice Input через меню «Пуск» или ярлык на рабочем столе.
 
-При первом запуске программа скачает выбранную модель Whisper. Windows-сборка
-включает библиотеки NVIDIA, поэтому занимает около 1.6 ГБ. Совместимая
-видеокарта используется автоматически; без неё приложение работает на CPU.
-Скорость зависит от мощности видеокарты или процессора, выбранной модели и
-длины фразы.
+Первый релиз пока не подписан сертификатом. Если SmartScreen покажет
+«Неизвестный издатель», у файла из этого репозитория можно нажать `Подробнее` →
+`Выполнить в любом случае`. SHA-256 указан на странице релиза.
 
-The first launch downloads the selected Whisper model. The Windows build is
-about 1.6 GB because it includes the NVIDIA runtime. A compatible GPU is used
-automatically, with a CPU fallback. Recognition speed depends on GPU or CPU
-performance, the selected model and the length of the recording.
+The first release is not code-signed. If SmartScreen warns about an unknown
+publisher, check that the file came from this repository, then click `More
+info` → `Run anyway`.
 
-Установщик пока не подписан сертификатом, поэтому SmartScreen может показать
-предупреждение «Неизвестный издатель». Скачивайте EXE только из Releases этого
-репозитория; контрольная сумма указана на странице релиза.
+## Как пользоваться / How to use
+
+1. Поставьте курсор в поле, куда нужно ввести текст.
+2. Нажмите горячую клавишу, указанную в настройках Voice Input.
+3. Говорите. После короткой паузы текст появится в поле.
+4. Нажмите горячую клавишу ещё раз, чтобы закончить запись раньше.
+
+Настройки языка, модели, микрофона и горячей клавиши открываются через Voice
+Input в меню «Пуск» или через значок в трее.
+
+| Режим / Mode | Что получится / Result |
+| --- | --- |
+| `Русский / Russian` | Распознавание русской речи |
+| `English` | Перевод речи на английский |
+| `Как в речи / As spoken` | Распознавание без перевода |
+
+Whisper умеет переводить только на английский, поэтому других целевых языков в
+меню нет.
+
+## Скорость, GPU и размер
+
+Windows-установщик занимает около 1.6 ГБ, потому что внутри уже есть CUDA,
+cuBLAS и cuDNN. Совместимая видеокарта NVIDIA используется автоматически. Если
+её нет, Voice Input продолжит работать на процессоре.
+
+Скорость зависит от мощности видеокарты или процессора, выбранной модели
+Whisper и длины фразы. Маленькие модели работают быстрее, большие обычно дают
+более точный текст.
+
+При первом запуске Voice Input скачает выбранную модель Whisper. После этого
+распознавание работает локально, а аудио никуда не отправляется.
+
+## Логи и удаление
+
+Если приложение не запускается, приложите этот файл к GitHub issue:
+
+```text
+%LOCALAPPDATA%\Voice Input\logs\voice-input.log
+```
+
+Удаление: `Параметры → Приложения → Установленные приложения → Voice Input →
+Удалить`. Удалитель отдельно спросит, нужно ли стереть настройки и модели.
 
 ## Linux
+
+Linux тоже поддерживается, но основная готовая сборка сейчас предназначена для
+Windows. Для Arch/CachyOS, Debian/Ubuntu, Fedora, openSUSE и Void:
 
 ```bash
 git clone https://github.com/nyavke/voice-input.git
@@ -42,85 +82,11 @@ cd voice-input
 ./install.sh
 ```
 
-Запускайте скрипт от обычного пользователя. `--dry-run` покажет план без
-изменений. Установщик определит дистрибутив, окружение и Wayland/X11, а в конце
-крупно напечатает настроенную горячую клавишу.
-
-Run the script as your normal user. `--dry-run` changes nothing. The installer
-detects the distro, desktop and display server, then prints the configured
-hotkey at the end.
-
-## Использование / Usage
-
-1. Поставьте курсор в нужное поле.
-2. Нажмите горячую клавишу из настроек.
-3. Говорите и сделайте короткую паузу. Текст вставится сам.
-4. Нажмите клавишу ещё раз, чтобы остановить запись раньше.
-
-Focus a text field, press the configured hotkey, speak and pause. Open Voice
-Input from the Start/app menu to change the language, model, microphone or
-hotkey.
-
-В Linux приложение также можно открыть командой `voice-input --settings` или
-`./run.sh` из каталога проекта.
-
-| Режим / Mode | Результат / Result |
-| --- | --- |
-| `Русский / Russian` | Русская транскрипция / Russian transcription |
-| `English` | Перевод речи на английский / Speech translated into English |
-| `Как в речи / As spoken` | Без перевода / No translation |
-
-Whisper переводит только на английский, поэтому других целевых языков в меню
-нет. Whisper translates only into English, so other target languages are not
-listed.
-
-## Совместимость / Compatibility
-
-- Windows 10 22H2 и Windows 11, x64
-- Arch/CachyOS/Manjaro, Debian/Ubuntu/Mint, Fedora, openSUSE и Void
-- Wayland и X11
-- Hyprland/caelestia, Sway, i3 и GNOME с нативной горячей клавишей
-- KDE, Cinnamon, XFCE и другие Linux-окружения через `evdev` fallback
-
-Для Linux нужен Python 3.9 или новее. Alpine/musl пока не поддерживается из-за
-отсутствия необходимых wheels. Windows-установщик уже содержит Python и все
-зависимости.
-
-## Диагностика / Diagnostics
-
-Windows пишет лог сюда:
-
-```text
-%LOCALAPPDATA%\Voice Input\logs\voice-input.log
-```
-
-Linux-команды:
-
-```bash
-voice-input --diag
-voice-input --toggle
-voice-input --quit
-```
-
-## Удаление / Uninstall
-
-В Windows откройте «Параметры → Приложения → Установленные приложения → Voice
-Input → Удалить». Удаление предложит отдельно стереть настройки и модели.
-
-В Linux:
-
-```bash
-./uninstall.sh --dry-run
-./uninstall.sh
-```
-
-Обычное удаление сохраняет настройки, модели и общие системные пакеты. Команда
-`./uninstall.sh --purge` также удаляет настройки и кэш приложения.
+Установщик работает с Wayland и X11, включая Hyprland, Sway, GNOME, KDE,
+Cinnamon и XFCE. Alpine/musl пока не поддерживается.
 
 ## Ошибки / Bugs
 
 Создайте [GitHub issue](https://github.com/nyavke/voice-input/issues/new/choose)
-или напишите в Telegram: [@nyavke](https://t.me/nyavke).
-
-Укажите Windows/Linux, версию системы и приложите Windows-лог или вывод
-`voice-input --diag` в Linux.
+или напишите в Telegram: [@nyavke](https://t.me/nyavke). Укажите версию Windows
+и Voice Input, а также приложите лог.
