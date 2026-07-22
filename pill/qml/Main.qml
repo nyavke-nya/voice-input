@@ -146,9 +146,7 @@ Window {
                           : ((win.recording || win.processing) ? Qt.rgba(win.accent.r,win.accent.g,win.accent.b,0.85) : win.rim)
             opacity: (win.recording || win.processing || backend.expanded || win.cardOpen) ? 1 : 0
 
-            // Раскрытие: ширина берётся мгновенно (иначе видно, как карточка «доезжает»
-            // до полной ширины). Анимируем только сворачивание и смену размера пилюли.
-            Behavior on width { enabled: !win.cardOpen; NumberAnimation { duration: 200; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
+            Behavior on width { NumberAnimation { duration: win.cardOpen ? 260 : 200; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
             Behavior on height { NumberAnimation { duration: win.cardOpen ? 260 : 200; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
             Behavior on radius { NumberAnimation { duration: 240; easing.type: Easing.Bezier; easing.bezierCurve: win.eDrawer } }
             Behavior on border.color { ColorAnimation { duration: 220 } }
@@ -593,8 +591,11 @@ Window {
 
                             Text { text: "ЦВЕТ ОФОРМЛЕНИЯ"; color: win.sub; font.family: win.ui; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 1.5 }
 
-                            Flow {
-                                width: parent.width; spacing: 14
+                            Grid {
+                                width: parent.width
+                                columns: 5
+                                rowSpacing: 14
+                                columnSpacing: (width - columns * 46) / (columns - 1)
                                 Repeater {
                                     model: win.themes.length
                                     Rectangle {
