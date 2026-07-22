@@ -225,7 +225,7 @@ def _hypr_paths() -> tuple[Path, Path, Path]:
     return cfg / "caelestia/hypr-user.lua", cfg / "hypr/hyprland.lua", cfg / "hypr/hyprland.conf"
 
 
-def _install_hypr(combo: str, position: str) -> bool:
+def _install_hypr(combo: str) -> bool:
     caelestia, main_lua, legacy = _hypr_paths()
     use_caelestia = caelestia.exists() and main_lua.exists()
     if use_caelestia:
@@ -237,7 +237,7 @@ def _install_hypr(combo: str, position: str) -> bool:
     lua = caelestia if use_caelestia else main_lua
     if lua.exists():
         _backup_once(lua)
-        return hypr.install(combo, position, path=lua)
+        return hypr.install(combo, path=lua)
     if legacy.exists() and _replace_block(legacy, _legacy_hypr_block(combo)):
         _reload(["hyprctl", "reload"])
         return True
@@ -323,13 +323,13 @@ def _uninstall_gsettings(desktop: str) -> bool:
     return True
 
 
-def install(combo: str, position: str = "bottom") -> bool:
+def install(combo: str) -> bool:
     """Установить native bind. False означает: включить evdev listener."""
     info = detect()
     cfg = _config_home()
     ok = False
     if info.desktop == "hyprland":
-        ok = _install_hypr(combo, position)
+        ok = _install_hypr(combo)
     elif info.desktop == "sway":
         path = cfg / "sway/config"
         ok = _replace_block(path, _sway_block(combo))
@@ -369,12 +369,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--install", action="store_true")
     parser.add_argument("--uninstall", action="store_true")
     parser.add_argument("--hotkey", default="grave")
-    parser.add_argument("--position", choices=("top", "bottom"), default="bottom")
     args = parser.parse_args(argv)
     if args.uninstall:
         return 0 if uninstall_all() else 1
     if args.install:
-        install(args.hotkey, args.position)
+        install(args.hotkey)
     info = detect()
     print(f"desktop={info.desktop} session={info.session}")
     return 0

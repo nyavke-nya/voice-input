@@ -3,9 +3,9 @@
 В Hyprland 0.55 с Lua-конфигом динамические windowrulev2/keyword не работают, а
 правильный способ сделать плавающий оверлей — это window_rule.
 Приложение владеет блоком между маркерами в hypr-user.lua: bind активации +
-window_rule (float/pin/no_initial_focus/size/move). При смене хоткея в настройках блок
-переписывается и конфиг перезагружается, поэтому нативный bind всегда совпадает
-с выбранной комбинацией.
+window_rule (float/pin/no_initial_focus/size/move). При смене хоткея в настройках
+блок переписывается и конфиг перезагружается, поэтому нативный bind всегда
+совпадает с выбранной комбинацией.
 
 Клавиатурный фокус сохраняет Qt.WindowDoesNotAcceptFocus в QML. В правиле остаётся
 no_initial_focus как дополнительная страховка; в отличие от no_focus он не ломает
@@ -68,10 +68,7 @@ def _lua_string(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
 
 
-def _block(combo: str, position: str = "bottom") -> str:
-    # move по Y: пилюля у самого низа или у самого верха экрана (применяется при
-    # маппинге окна -> смена положения требует перезапуска демона, см. ui.py).
-    move_y = "monitor_h*0.012" if position == "top" else "monitor_h*0.985-window_h"
+def _block(combo: str) -> str:
     return "\n".join([
         BEGIN,
         "-- Управляется Voice Input. Хоткей меняется в настройках.",
@@ -95,13 +92,13 @@ def _block(combo: str, position: str = "bottom") -> str:
         "    rounding         = 0,",
         '    opacity          = "1.0 override",',  # перебить глобальный windowOpacity -> без просвечивания
         '    size             = "400 960",',
-        f'    move             = "(monitor_w*0.5-window_w*0.5) ({move_y})",',
+        '    move             = "(monitor_w*0.5-window_w*0.5) (monitor_h*0.985-window_h)",',
         "})",
         END,
     ])
 
 
-def install(combo: str, position: str = "bottom", path: Optional[Path] = None) -> bool:
+def install(combo: str, path: Optional[Path] = None) -> bool:
     """Вписать/обновить управляемый блок в Lua-конфиг и reload Hyprland.
 
     Без ``path`` используется безопасная пользовательская точка caelestia.
@@ -112,7 +109,7 @@ def install(combo: str, position: str = "bottom", path: Optional[Path] = None) -
         return False
     try:
         text = lua.read_text(encoding="utf-8")
-        block = _block(combo, position)
+        block = _block(combo)
     except (OSError, ValueError) as e:
         print(f"[voice-input] интеграция Hyprland не обновлена: {e}")
         return False
@@ -178,6 +175,5 @@ if __name__ == "__main__":
     b = _block("alt+a")
     assert BEGIN in b and END in b and 'no_initial_focus = true' in b
     assert '"ALT + A"' in b and "-m pill --toggle" in b
-    assert "monitor_h*0.985-window_h" in b               # низ по умолчанию
-    assert "monitor_h*0.012" in _block("alt+a", "top")   # верх
+    assert "monitor_h*0.985-window_h" in b
     print("hypr OK")

@@ -5,8 +5,8 @@ import QtQuick.Window
 import QtQuick.Effects
 import QtQuick.Controls as Controls
 
-// «Пилюля» — стеклянный оверлей снизу по центру. Где возможно, позицию/размер
-// задаёт compositor. Тема: тёмное дымчатое стекло, янтарный акцент, глубина.
+// «Пилюля» — стеклянный оверлей снизу по центру. Где возможно, размер и нижнюю
+// привязку задаёт compositor. Тема: тёмное дымчатое стекло, янтарный акцент, глубина.
 // Раскрытие настроек — ЕДИНАЯ поверхность: пилюля физически вырастает вверх в
 // карточку и ужимается обратно (без отдельной панели).
 Window {
@@ -21,7 +21,7 @@ Window {
     width: Math.min(400, usableWidth > 0 ? usableWidth : 400)
     height: Math.min(960, usableHeight > 0 ? usableHeight : 960)
     x: Screen.virtualX + (usableWidth - width) / 2
-    y: atTop ? Screen.virtualY : Screen.virtualY + usableHeight - height
+    y: Screen.virtualY + usableHeight - height
     color: "transparent"
     // Обычно фокус остаётся в исходном поле. Только кнопка «Записать»
     // временно разрешает фокус, чтобы не читать /dev/input на Wayland.
@@ -52,7 +52,6 @@ Window {
 
     readonly property bool recording: backend.appState === "recording"
     readonly property bool processing: backend.appState === "processing"
-    readonly property bool atTop: backend.pillPosition === "top"   // пилюля сверху/снизу экрана
     // Python передаёт этот rect в QWindow.setMask: прозрачная часть окна не
     // перехватывает клики по приложениям под высокой 960px-поверхностью.
     readonly property rect inputRegion: Qt.rect(
@@ -114,9 +113,7 @@ Window {
             onTabChanged: paneScroll.contentY = 0
 
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: win.atTop ? parent.top : undefined
-            anchors.bottom: win.atTop ? undefined : parent.bottom
-            anchors.topMargin: 18
+            anchors.bottom: parent.bottom
             anchors.bottomMargin: 18
 
             readonly property real collapsedW: win.recording ? 312 : (win.processing ? 232 : 200)
@@ -435,23 +432,10 @@ Window {
                                 }
                             }
 
-                            // Положение пилюли по вертикали (idx 6)
-                            Column {
-                                width: parent.width; spacing: 8
-                                opacity: win.stg(6); transform: Translate { y: (1 - win.stg(6)) * 14 }
-                                Text { text: "ПОЛОЖЕНИЕ ПИЛЮЛИ"; color: win.sub; font.family: win.ui; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 1.5 }
-                                Segmented {
-                                    width: parent.width; accent: win.accent; ink: win.ink; sub: win.sub; fontFamily: win.ui; slide: win.reveal > 0.98
-                                    options: [{label: "Снизу", value: "bottom"}, {label: "Сверху", value: "top"}]
-                                    current: backend.pillPosition
-                                    onSelected: (v) => backend.pillPosition = v
-                                }
-                            }
-
-                            // Выйти (idx 7)
+                            // Выйти (idx 6)
                             Item {
                                 width: parent.width; height: 42
-                                opacity: win.stg(7); transform: Translate { y: (1 - win.stg(7)) * 14 }
+                                opacity: win.stg(6); transform: Translate { y: (1 - win.stg(6)) * 14 }
                                 Rectangle {
                                     anchors.fill: parent; radius: 12
                                     color: quitMa.containsMouse ? Qt.rgba(0.94,0.56,0.53,0.12) : win.fill
@@ -561,8 +545,7 @@ Window {
             Item {
                 id: pillContent
                 anchors.left: parent.left; anchors.right: parent.right
-                anchors.top: win.atTop ? parent.top : undefined
-                anchors.bottom: win.atTop ? undefined : parent.bottom
+                anchors.bottom: parent.bottom
                 height: 58
                 opacity: win.cardOpen ? 0 : 1
                 visible: opacity > 0.01

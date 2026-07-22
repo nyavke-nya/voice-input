@@ -28,7 +28,7 @@ from .hotkey import canonical_combo, capture_once
 from .stt_engine import SttEngine
 from .text_injector import TextInjector
 
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 _WIN = sys.platform.startswith("win")
 
 
@@ -81,7 +81,6 @@ class Backend(QObject):
         self._stats = stats.load()
         self._tray = None  # QSystemTrayIcon на Windows; ставит build_app
         self.on_hotkey_changed = lambda combo: None  # ставит __main__ (evdev/pynput)
-        self.on_restart = lambda: None               # ставит __main__ (re-exec демона)
 
         self.recorder = AudioRecorder(cfg)
         self.recorder.on_level = self._on_level
@@ -338,20 +337,6 @@ class Backend(QObject):
 
     silenceMs = Property(int, _get_silence, _set_silence, notify=settingsChanged)
 
-    def _get_pill_position(self):
-        return self._cfg["pill_position"]
-
-    def _set_pill_position(self, v):
-        if v not in ("bottom", "top") or v == self._cfg["pill_position"]:
-            return
-        self._cfg["pill_position"] = v
-        self._save()
-        self.settingsChanged.emit()
-        if desktop_integration.install(self._cfg["hotkey"], v):
-            self.on_restart()  # часть WM применяет move при следующем маппинге
-
-    pillPosition = Property(str, _get_pill_position, _set_pill_position, notify=settingsChanged)
-
     def _get_hotkey(self):
         return self._cfg["hotkey"]
 
@@ -364,7 +349,7 @@ class Backend(QObject):
         if v != self._cfg["hotkey"]:
             self._cfg["hotkey"] = v
             self._save()
-            desktop_integration.install(v, self._cfg["pill_position"])
+            desktop_integration.install(v)
             self.on_hotkey_changed(v)  # обновит evdev/pynput-слушатель, если активен
             self.settingsChanged.emit()
 

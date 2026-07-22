@@ -22,7 +22,6 @@ DEFAULTS: dict = {
     "beam_size": 5,                   # ширина beam-search (5 = точнее, ~как дефолт whisper)
     "packs": ["profanity"],           # словарные пакеты biasing: "profanity" | "it" (см. vocab.py)
     "vocabulary": "",                 # свои hotwords через пробел (имена/термины/сленг)
-    "pill_position": "bottom",        # где пилюля: "bottom" | "top" экрана
 }
 
 _ALLOWED = {
@@ -30,7 +29,6 @@ _ALLOWED = {
     "model": {"tiny", "small", "medium", "large"},
     "input_method": {"keyboard", "clipboard"},
     "device": {"auto", "cuda", "cpu"},
-    "pill_position": {"bottom", "top"},
 }
 _KNOWN_PACKS = {"profanity", "it"}
 
@@ -115,6 +113,4 @@ if __name__ == "__main__":
     assert _sanitize({"packs": "nope"})["packs"] == ["profanity"]
     assert _sanitize({"beam_size": 99})["beam_size"] == 10
     assert _sanitize({"beam_size": "x"})["beam_size"] == 5
-    assert _sanitize({"pill_position": "top"})["pill_position"] == "top"
-    assert _sanitize({"pill_position": "xx"})["pill_position"] == "bottom"
     print("config OK")

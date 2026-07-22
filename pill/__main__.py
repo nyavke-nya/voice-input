@@ -249,23 +249,7 @@ def main() -> int:
     backend.notify.connect(lambda m: print(f"[voice-input] {m}"))
 
     # На Windows нет Linux desktop integration — сразу универсальный (pynput) хоткей.
-    native_hotkey = False if _WIN else desktop_integration.install(
-        cfg["hotkey"], cfg.get("pill_position", "bottom")
-    )
-
-    def _restart() -> None:
-        # Некоторые WM применяют позицию только при новом маппинге окна.
-        if not _WIN:
-            try:
-                _sock_path().unlink()
-            except OSError:
-                pass
-        if paths.is_frozen():
-            os.execv(sys.executable, [sys.executable])  # EXE сам и есть демон
-        else:
-            os.execv(sys.executable, [sys.executable, "-m", "pill"])
-
-    backend.on_restart = _restart
+    native_hotkey = False if _WIN else desktop_integration.install(cfg["hotkey"])
 
     listener = None
     if not native_hotkey:  # нет нативного бинда -> универсальный слушатель

@@ -594,13 +594,13 @@ if (os.environ.get("VOICE_INPUT_NEW_CONFIG") == "true" and cfg["hotkey"] == "gra
         and desktop != "hyprland"):
     cfg["hotkey"] = "ctrl+alt+space"
     config.save(cfg)
-native = desktop_integration.install(cfg["hotkey"], cfg.get("pill_position", "bottom"))
+native = desktop_integration.install(cfg["hotkey"])
 # A lone printable key leaks into the focused field when evdev is only reading
 # events. Fresh fallback installs therefore use a non-printing combination.
 if not native and os.environ.get("VOICE_INPUT_NEW_CONFIG") == "true" and cfg["hotkey"] == "grave":
     cfg["hotkey"] = "ctrl+alt+space"
     config.save(cfg)
-    desktop_integration.install(cfg["hotkey"], cfg.get("pill_position", "bottom"))
+    desktop_integration.install(cfg["hotkey"])
 PY
 
 voice_write_state

@@ -2,7 +2,7 @@
 ; Собирает dist\VoiceInput\ (результат PyInstaller) в один VoiceInputSetup.exe.
 
 #define AppName "Voice Input"
-#define AppVersion "0.1.1"
+#define AppVersion "0.1.2"
 #define AppExe "VoiceInput.exe"
 
 [Setup]
