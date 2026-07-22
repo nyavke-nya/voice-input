@@ -1,4 +1,4 @@
-#Requires -Version 5
+﻿#Requires -Version 5
 <#
   Одна команда для воспроизводимой локальной сборки Voice Input под Windows.
 

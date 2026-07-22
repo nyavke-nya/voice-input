@@ -1,4 +1,4 @@
-#Requires -Version 5
+﻿#Requires -Version 5
 <#
   Полный bootstrap Voice Input под Windows одной командой: ставит Python 3.12 и
   Inno Setup (winget, per-user, без прав администратора), при необходимости качает
