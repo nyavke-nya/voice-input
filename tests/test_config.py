@@ -21,6 +21,7 @@ def test_sanitize_fixes_garbage():
 def test_save_load_roundtrip():
     with tempfile.TemporaryDirectory() as d:
         os.environ["XDG_CONFIG_HOME"] = d
+        os.environ["APPDATA"] = d  # Windows: конфиг в %APPDATA%, XDG там игнорируется
         cfg = config.load()
         cfg["language"] = "ru"
         cfg["silence_ms"] = 700
@@ -33,12 +34,14 @@ def test_save_load_roundtrip():
 def test_missing_config_returns_defaults():
     with tempfile.TemporaryDirectory() as d:
         os.environ["XDG_CONFIG_HOME"] = d
+        os.environ["APPDATA"] = d  # Windows: конфиг в %APPDATA%, XDG там игнорируется
         assert config.load() == config.DEFAULTS
 
 
 def test_malformed_shape_and_nested_defaults_are_safe():
     with tempfile.TemporaryDirectory() as d:
         os.environ["XDG_CONFIG_HOME"] = d
+        os.environ["APPDATA"] = d  # Windows: конфиг в %APPDATA%, XDG там игнорируется
         p = config.config_path()
         p.parent.mkdir(parents=True)
         p.write_text("[]")

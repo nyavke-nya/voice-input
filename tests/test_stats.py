@@ -46,6 +46,7 @@ def test_history_capped_newest_first():
 def test_load_repairs_malformed_data():
     with tempfile.TemporaryDirectory() as d:
         os.environ["XDG_CONFIG_HOME"] = d
+        os.environ["APPDATA"] = d  # Windows: stats рядом с конфигом в %APPDATA%
         p = stats.stats_path()
         p.parent.mkdir(parents=True)
         p.write_text('{"count": -2, "last": null, "history": [1, {"text": "ok"}]}')
