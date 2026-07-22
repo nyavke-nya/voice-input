@@ -20,7 +20,7 @@ import sys
 import threading
 import time
 
-from . import config
+from . import config, paths
 
 _WIN = sys.platform.startswith("win")
 _TCP_PORT = 47187  # localhost, для Windows-IPC
@@ -31,6 +31,7 @@ Usage: voice-input [OPTION]
   --toggle     start or stop dictation / начать или остановить диктовку
   --settings   open settings / открыть настройки
   --diag       print diagnostics / показать диагностику
+  --self-test  headless smoke-test / проверка сборки без GUI
   --quit       stop the daemon / остановить демон
   -h, --help   show this help / показать справку
 """
@@ -116,13 +117,80 @@ def _serve(backend, srv) -> None:
         # b"ping" — просто подтверждение, что демон жив
 
 
+def _setup_logging() -> None:
+    """Rotating-лог в %LOCALAPPDATA%\\Voice Input\\logs; во frozen (нет консоли)
+    перехватываем существующие print() в лог, чтобы не терять диагностику."""
+    if not (paths.is_frozen() or _WIN):
+        return
+    import logging
+    from logging.handlers import RotatingFileHandler
+
+    try:
+        logfile = paths.log_dir() / "voice-input.log"
+        handler = RotatingFileHandler(
+            logfile, maxBytes=1_000_000, backupCount=3, encoding="utf-8"
+        )
+    except OSError:
+        return
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    logger = logging.getLogger("voice-input")
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
+
+    if paths.is_frozen():  # windowed EXE: stdout/stderr закрыты — шлём print в лог
+        class _LogWriter:
+            def __init__(self, level: int):
+                self._level = level
+                self._buf = ""
+
+            def write(self, chunk: str) -> None:
+                self._buf += chunk
+                while "\n" in self._buf:
+                    line, self._buf = self._buf.split("\n", 1)
+                    if line:
+                        logger.log(self._level, line)
+
+            def flush(self) -> None:
+                if self._buf:
+                    logger.log(self._level, self._buf)
+                    self._buf = ""
+
+        sys.stdout = _LogWriter(logging.INFO)
+        sys.stderr = _LogWriter(logging.ERROR)
+
+
+def _self_test() -> int:
+    """Проверка сборки без GUI: тяжёлые зависимости грузятся, ресурсы на месте.
+    Главная ценность на Windows — доказать, что DLL ML-стека и Qt подхватились."""
+    import importlib
+
+    for module in ("PySide6.QtCore", "PySide6.QtGui", "PySide6.QtQml",
+                   "numpy", "sounddevice", "faster_whisper", "ctranslate2", "onnxruntime"):
+        importlib.import_module(module)
+    from . import hotkey
+
+    assert paths.resource_path("qml", "Main.qml").is_file(), "нет Main.qml"
+    for font in ("AdwaitaSans-Regular.ttf", "AdwaitaMono-Regular.ttf"):
+        assert paths.resource_path("qml", "fonts", font).is_file(), font
+    cfg = config.load()
+    hotkey.canonical_combo(cfg["hotkey"])
+    if _WIN:
+        import pynput  # noqa: F401
+        from PySide6.QtWidgets import QSystemTrayIcon  # noqa: F401
+
+        hotkey.to_pynput(cfg["hotkey"])
+        assert paths.icon_path() is not None, "нет voice-input.ico"
+    print("self-test OK")
+    return 0
+
+
 def main() -> int:
     args = sys.argv[1:]
 
     if args in (["-h"], ["--help"]):
         print(_USAGE, end="")
         return 0
-    known = {"--toggle", "--settings", "--diag", "--quit"}
+    known = {"--toggle", "--settings", "--diag", "--self-test", "--quit"}
     if len(args) > 1 or (args and args[0] not in known):
         bad = " ".join(args) or "<empty>"
         print(f"Unknown option / Неизвестный параметр: {bad}\n", file=sys.stderr)
@@ -139,6 +207,9 @@ def main() -> int:
         print("injection:", TextInjector.diagnostics())
         print("hotkey:", config.load()["hotkey"])
         return 0
+
+    if args == ["--self-test"]:
+        return _self_test()
 
     want = args[0][2:] if args else "start"
     command = {"toggle": b"toggle", "settings": b"settings", "quit": b"quit", "start": b"ping"}[want]
@@ -167,6 +238,7 @@ def main() -> int:
         return 1
 
     cfg = config.load()
+    _setup_logging()  # frozen/Windows: rotating log + перехват print без консоли
     from PySide6.QtCore import QTimer
 
     from . import desktop_integration
@@ -176,7 +248,8 @@ def main() -> int:
     app, backend, engine = build_app(cfg)
     backend.notify.connect(lambda m: print(f"[voice-input] {m}"))
 
-    native_hotkey = desktop_integration.install(
+    # На Windows нет Linux desktop integration — сразу универсальный (pynput) хоткей.
+    native_hotkey = False if _WIN else desktop_integration.install(
         cfg["hotkey"], cfg.get("pill_position", "bottom")
     )
 
@@ -187,7 +260,10 @@ def main() -> int:
                 _sock_path().unlink()
             except OSError:
                 pass
-        os.execv(sys.executable, [sys.executable, "-m", "pill"])
+        if paths.is_frozen():
+            os.execv(sys.executable, [sys.executable])  # EXE сам и есть демон
+        else:
+            os.execv(sys.executable, [sys.executable, "-m", "pill"])
 
     backend.on_restart = _restart
 

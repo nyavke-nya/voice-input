@@ -16,20 +16,20 @@ import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import Property, QKeyCombination, QObject, QTimer, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QGuiApplication, QKeySequence, QRegion
 from PySide6.QtQml import QQmlApplicationEngine
 
-from . import config, desktop_integration, stats
+from . import config, desktop_integration, paths, stats
 from .audio_recorder import AudioRecorder
 from .hotkey import canonical_combo, capture_once
 from .stt_engine import SttEngine
 from .text_injector import TextInjector
 
 VERSION = "0.1.0"
+_WIN = sys.platform.startswith("win")
 
 
 def _qt_hotkey_combo(key: int, modifiers: int) -> Optional[str]:
@@ -79,6 +79,7 @@ class Backend(QObject):
         self._capturing = False
         self._capture_serial = 0
         self._stats = stats.load()
+        self._tray = None  # QSystemTrayIcon на Windows; ставит build_app
         self.on_hotkey_changed = lambda combo: None  # ставит __main__ (evdev/pynput)
         self.on_restart = lambda: None               # ставит __main__ (re-exec демона)
 
@@ -158,13 +159,21 @@ class Backend(QObject):
                 return
         self._set_state("idle")
 
+    def _desktop_notify(self, msg: str) -> None:
+        """Всплывашка ОС: трей на Windows, notify-send на Linux."""
+        if self._tray is not None:
+            self._tray.showMessage("Voice Input", msg)
+            return
+        if not _WIN:
+            try:
+                subprocess.run(["notify-send", "Voice Input", msg], check=False)
+            except OSError:
+                pass
+
     def _show_error(self, msg: str) -> None:
         print(f"[voice-input] ошибка: {msg}")
         self.notify.emit(msg)
-        try:
-            subprocess.run(["notify-send", "Voice Input", msg], check=False)
-        except OSError:
-            pass
+        self._desktop_notify(msg)
 
     def _on_error(self, msg: str) -> None:
         self._show_error(msg)
@@ -226,6 +235,10 @@ class Backend(QObject):
         import os
         return bool(os.environ.get("WAYLAND_DISPLAY"))
 
+    @Property(bool, constant=True)
+    def isWindows(self):
+        return _WIN
+
     @Property("QStringList", constant=True)
     def devices(self):
         return self._device_names
@@ -254,13 +267,7 @@ class Backend(QObject):
         if 0 <= i < len(h):
             QGuiApplication.clipboard().setText(h[i]["text"])
             self.notify.emit("Скопировано в буфер")
-            try:
-                subprocess.run(
-                    ["notify-send", "Voice Input", "Скопировано в буфер"],
-                    check=False,
-                )
-            except OSError:
-                pass
+            self._desktop_notify("Скопировано в буфер")
 
     @Slot()
     def resetStats(self):
@@ -454,18 +461,55 @@ class Backend(QObject):
         self.recorder.join()
 
 
+def _install_tray(app, backend) -> None:
+    """Иконка в трее (только Windows): клик открывает настройки; меню и tooltip."""
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QMenu, QSystemTrayIcon
+
+    ico = paths.icon_path()
+    icon = QIcon(str(ico)) if ico else app.windowIcon()
+    app.setWindowIcon(icon)
+    tray = QSystemTrayIcon(icon, app)
+    menu = QMenu()
+    menu.addAction("Начать / остановить запись").triggered.connect(backend.request_toggle)
+    menu.addAction("Настройки").triggered.connect(backend.request_settings)
+    menu.addSeparator()
+    menu.addAction("Выход").triggered.connect(backend.quitApp)
+    tray.setContextMenu(menu)
+
+    def _tooltip():
+        tray.setToolTip(f"Voice Input · {backend.hotkey}")
+
+    _tooltip()
+    backend.settingsChanged.connect(_tooltip)  # обновить при смене хоткея
+    tray.activated.connect(
+        lambda reason: backend.request_settings()
+        if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick)
+        else None
+    )
+    tray.show()
+    backend._tray = tray
+    backend._tray_menu = menu  # удержать ссылку от GC
+
+
 def build_app(cfg: dict):
-    """Создать QGuiApplication + движок QML. Возвращает (app, backend, engine)."""
-    app = QGuiApplication(sys.argv)
+    """Создать приложение + движок QML. Возвращает (app, backend, engine)."""
+    if _WIN:  # трей/меню — виджеты, нужен QApplication
+        from PySide6.QtWidgets import QApplication
+        app = QApplication(sys.argv)
+    else:
+        app = QGuiApplication(sys.argv)
     app.setApplicationName("pill")
     app.setApplicationDisplayName("Voice Input")
     app.setDesktopFileName("pill")  # -> app_id/class для оконных правил Hyprland
     app.setQuitOnLastWindowClosed(False)  # демон живёт, когда пилюля скрыта
     backend = Backend(cfg)
+    if _WIN:
+        _install_tray(app, backend)
     engine = QQmlApplicationEngine()
     engine.setParent(backend)  # QML должен уничтожиться раньше context-property backend
     engine.rootContext().setContextProperty("backend", backend)
-    qml = Path(__file__).parent / "qml" / "Main.qml"
+    qml = paths.resource_path("qml", "Main.qml")  # source checkout и onedir(_MEIPASS)
     engine.load(QUrl.fromLocalFile(str(qml)))
     if not engine.rootObjects():
         raise RuntimeError("QML не загрузился")

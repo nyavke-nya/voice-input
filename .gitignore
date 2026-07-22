@@ -5,3 +5,7 @@ __pycache__/
 *.tar.gz
 .remember/
 .~lock.*#
+# Windows build artifacts (PyInstaller / Inno / build venv)
+/build/
+/dist/
+packaging/windows/.venv-build/

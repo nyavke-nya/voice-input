@@ -9,6 +9,7 @@ import re
 import threading
 from typing import Optional
 
+from . import paths
 from .vocab import build_bias
 
 # tiny/small/medium грузятся по имени; «large» -> large-v3 (лучшее качество на мате
@@ -99,24 +100,45 @@ class SttEngine:
 
     @staticmethod
     def _preload_cuda_libs():
-        """Подгрузить cuBLAS/cuDNN из pip-пакетов nvidia-*-cu12 (если стоят),
-        чтобы ctranslate2 нашёл их без LD_LIBRARY_PATH. Без них GPU не поедет."""
+        """Найти cuBLAS/cuDNN из pip-пакетов nvidia-*-cu12, чтобы ctranslate2 нашёл
+        их без установленного CUDA Toolkit / LD_LIBRARY_PATH. Без них GPU не поедет.
+
+        Linux: .so через RTLD_GLOBAL. Windows: DLL лежат в nvidia/*/bin — добавляем
+        каталоги в поиск DLL и предзагружаем. Во frozen-сборке пакета nvidia нет —
+        DLL уже уложены рядом с ctranslate2, поиск идёт из _MEIPASS."""
         import ctypes
         import glob
         import os
+        import sys
 
         try:
             import nvidia  # namespace-пакет: путь(и) в __path__, __file__ = None
         except ImportError:
             return
+        is_win = sys.platform.startswith("win")
         for base in list(getattr(nvidia, "__path__", [])):
-            for pat in ("cublas/lib/libcublasLt.so*", "cublas/lib/libcublas.so*",
-                        "cudnn/lib/libcudnn*.so*"):
-                for so in sorted(glob.glob(os.path.join(base, pat))):
+            if is_win:
+                for sub in ("cublas", "cudnn", "cuda_runtime"):
+                    bindir = os.path.join(base, sub, "bin")
+                    if not os.path.isdir(bindir):
+                        continue
                     try:
-                        ctypes.CDLL(so, mode=ctypes.RTLD_GLOBAL)
+                        os.add_dll_directory(bindir)  # чтобы delay-load нашёл DLL
                     except OSError:
                         pass
+                    for dll in sorted(glob.glob(os.path.join(bindir, "*.dll"))):
+                        try:
+                            ctypes.WinDLL(dll)
+                        except OSError:
+                            pass
+            else:
+                for pat in ("cublas/lib/libcublasLt.so*", "cublas/lib/libcublas.so*",
+                            "cudnn/lib/libcudnn*.so*"):
+                    for so in sorted(glob.glob(os.path.join(base, pat))):
+                        try:
+                            ctypes.CDLL(so, mode=ctypes.RTLD_GLOBAL)
+                        except OSError:
+                            pass
 
     def _device_plan(self):
         """Порядок попыток (device, compute_type). GPU резко ускоряет БЕЗ смены модели."""
@@ -152,6 +174,9 @@ class SttEngine:
                         kw = {"device": device, "compute_type": compute}
                         if device == "cpu":
                             kw["cpu_threads"] = os.cpu_count() or 4
+                        root = paths.models_dir()  # Windows: %LOCALAPPDATA%\Voice Input\models
+                        if root is not None:
+                            kw["download_root"] = str(root)
                         model = WhisperModel(name, **kw)
                         self._model = model
                         self._model_name = name

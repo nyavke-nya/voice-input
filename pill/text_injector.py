@@ -46,6 +46,47 @@ def _have(tool: str) -> bool:
     return shutil.which(tool) is not None
 
 
+def _win_clipboard_set(text: str) -> None:
+    """Положить Unicode-текст в буфер Windows через WinAPI (CF_UNICODETEXT).
+
+    Через ctypes, а не Qt: инъекция идёт из аудиопотока, а QClipboard небезопасен
+    вне GUI-потока."""
+    import ctypes
+    from ctypes import wintypes
+
+    CF_UNICODETEXT = 13
+    GMEM_MOVEABLE = 0x0002
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    user32.OpenClipboard.argtypes = [wintypes.HWND]
+    user32.OpenClipboard.restype = wintypes.BOOL
+    user32.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
+    user32.SetClipboardData.restype = wintypes.HANDLE
+    kernel32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
+    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
+    kernel32.GlobalLock.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalLock.restype = wintypes.LPVOID
+    kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
+
+    data = text.encode("utf-16-le") + b"\x00\x00"
+    if not user32.OpenClipboard(None):
+        raise OSError("OpenClipboard не удался")
+    try:
+        user32.EmptyClipboard()
+        handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
+        if not handle:
+            raise OSError("GlobalAlloc не удался")
+        pointer = kernel32.GlobalLock(handle)
+        if not pointer:
+            raise OSError("GlobalLock не удался")
+        ctypes.memmove(pointer, data, len(data))
+        kernel32.GlobalUnlock(handle)
+        if not user32.SetClipboardData(CF_UNICODETEXT, handle):
+            raise OSError("SetClipboardData не удался")
+    finally:
+        user32.CloseClipboard()
+
+
 def _ensure_ydotoold() -> None:
     """Start ydotoold lazily on non-systemd desktops and custom init systems."""
     runtime = os.environ.get("XDG_RUNTIME_DIR") or f"/tmp/voice-input-{os.getuid()}"
@@ -227,9 +268,21 @@ class TextInjector:
         return True
 
     def _inject_windows(self, text: str) -> bool:
-        from pynput.keyboard import Controller  # Windows: Unicode-набор, фокус не нужен
+        if self.cfg.get("input_method", "keyboard") == "clipboard":
+            return self._inject_windows_clipboard(text)
+        from pynput.keyboard import Controller  # keyboard: Unicode-набор, фокус не нужен
 
         Controller().type(text)
+        return True
+
+    def _inject_windows_clipboard(self, text: str) -> bool:
+        from pynput.keyboard import Controller, Key
+
+        _win_clipboard_set(text)  # Win32 clipboard (потокобезопасно, без Qt)
+        keyboard = Controller()
+        with keyboard.pressed(Key.ctrl):
+            keyboard.press("v")
+            keyboard.release("v")
         return True
 
     @staticmethod

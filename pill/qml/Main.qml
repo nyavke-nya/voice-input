@@ -26,6 +26,7 @@ Window {
     // Обычно фокус остаётся в исходном поле. Только кнопка «Записать»
     // временно разрешает фокус, чтобы не читать /dev/input на Wayland.
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+           | (backend.isWindows ? Qt.Tool : 0)  // не показывать пилюлю в таскбаре Windows
            | (backend.capturing ? 0 : Qt.WindowDoesNotAcceptFocus)
     title: "Voice Input"
 

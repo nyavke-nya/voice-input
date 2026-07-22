@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
+from . import paths
 from .hotkey import canonical_combo
 
 DEFAULTS: dict = {
@@ -36,15 +36,11 @@ _KNOWN_PACKS = {"profanity", "it"}
 
 
 def config_path() -> Path:
-    base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
-    return Path(base) / "pill" / "config.json"
+    return paths.config_path()
 
 
 def cache_dir() -> Path:
-    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
-    d = Path(base) / "pill"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    return paths.cache_dir()
 
 
 def _sanitize(cfg: dict) -> dict:
